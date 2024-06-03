@@ -10,3 +10,18 @@ lsc() {
     fi
 }
 
+# CURRENT BRANCH / PATH
+COLOR_DEF='%F{normal}'
+COLOR_USR='%F{243}'
+COLOR_DIR='%F{cyan}'
+COLOR_GIT='%F{green}'
+
+function parse_git_branch() {
+    git branch 2> /dev/null | sed -n -e 's/^\* \(.*\)/[\1]/p'
+}
+
+setopt PROMPT_SUBST
+
+#export PROMPT='${COLOR_USR}[%D{%d/%m/%y %H:%M:%S}]%f ${COLOR_USR}%n%f ${COLOR_DIR}%~%f ${COLOR_GIT}$(parse_git_branch)%f ${COLOR_DEF}$%f '
+export PROMPT='${COLOR_USR}[%D{%d/%m/%y %H:%M:%S}]%f ${COLOR_DIR}%~%f ${COLOR_GIT}$(parse_git_branch)%f ${COLOR_DEF}$%f '
+
