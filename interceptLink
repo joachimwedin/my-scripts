@@ -1,0 +1,4 @@
+#!/bin/bash -eux
+LINK="${1}"
+
+adb shell am start -a android.intent.action.VIEW -c android.intent.category.BROWSABLE -d "$LINK"

@@ -1,0 +1,7 @@
+#!/bin/bash -eux
+
+SELECTED_BRANCH=$(git branch -a | sed 's/remotes\///' | grep -v HEAD | fzf --height=40% --layout=reverse | xargs)
+
+if [[ -n $SELECTED_BRANCH ]]; then
+    git merge "$SELECTED_BRANCH"
+fi
