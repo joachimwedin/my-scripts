@@ -1,4 +1,4 @@
-export PATH=$PATH:$HOME/scripts
+export PATH=$PATH:$(pwd)
 
 lsc() {
     local script
