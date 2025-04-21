@@ -1,0 +1,6 @@
+#!/bin/bash -eux
+
+SELECTED_BRANCH=$(git reflog | grep -o 'checkout: moving from .* to ' | sed -e 's/checkout: moving from //' -e 's/ to $//' | awk '!a[$0]++' | fzf --height=40% --layout=reverse | xargs)
+if [[ -n $SELECTED_BRANCH ]]; then
+    git checkout "$SELECTED_BRANCH"
+fi
