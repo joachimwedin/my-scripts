@@ -10,18 +10,16 @@ lsc() {
     fi
 }
 
+COLOR_DEF='\e[0m'
+COLOR_TIME='\e[32m'
+COLOR_DIR='\e[96m'
+COLOR_GIT='\e[95m'
+COLOR_DOLLAR='\e[0m'
 
-COLOR_DEF="\[$(tput sgr0)\]"
-COLOR_USR="\[$(tput setaf 243)\]"
-COLOR_DIR="\[$(tput setaf 6)\]"
-COLOR_GIT="\[$(tput setaf 2)\]"
-
-function parse_git_branch {
-    git branch 2> /dev/null | sed -n -e 's/^\* \(.*\)/[\1]/p'
+function parse_git_branch() {
+    git branch 2> /dev/null | sed -n -e 's/^\* \(.*\)/ (\1)/p'
 }
 
-function format_date {
-    date +"%d/%m/%y %H:%M:%S"
-}
-
-export PS1="${COLOR_USR}[\$(format_date)]${COLOR_DEF} ${COLOR_DIR}\w${COLOR_DEF} ${COLOR_GIT}\$(parse_git_branch)${COLOR_DEF}$ "
+PROMPT_COMMAND='\
+PS1_CMD="${COLOR_TIME}[\D{%d/%m/%y} \t] ${COLOR_DIR}\w${COLOR_GIT}$(parse_git_branch)${COLOR_DOLLAR} \\$ ${COLOR_DEF}";\
+PS1=${PS1_CMD}'
