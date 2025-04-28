@@ -10,11 +10,11 @@ lsc() {
     fi
 }
 
-COLOR_DEF='\e[0m'
-COLOR_TIME='\e[32m'
-COLOR_DIR='\e[96m'
-COLOR_GIT='\e[95m'
-COLOR_DOLLAR='\e[0m'
+COLOR_DEF='\[\e[0m\]'
+COLOR_TIME='\[\e[32m\]'
+COLOR_DIR='\[\e[96m\]'
+COLOR_GIT='\[\e[95m\]'
+COLOR_DOLLAR='\[\e[0m\]'
 
 function parse_git_branch() {
     git branch 2> /dev/null | sed -n -e 's/^\* \(.*\)/ (\1)/p'
