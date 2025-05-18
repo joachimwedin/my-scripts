@@ -1,4 +1,4 @@
-export PATH=$PATH:$(pwd)
+export PATH=$PATH:$REPO_DIR/my-scripts
 
 lsc() {
     local script
@@ -25,3 +25,4 @@ setopt PROMPT_SUBST
 #export PROMPT='${COLOR_USR}[%D{%d/%m/%y %H:%M:%S}]%f ${COLOR_USR}%n%f ${COLOR_DIR}%~%f ${COLOR_GIT}$(parse_git_branch)%f ${COLOR_DEF}$%f '
 export PROMPT='${COLOR_USR}[%D{%d/%m/%y %H:%M:%S}]%f ${COLOR_DIR}%~%f ${COLOR_GIT}$(parse_git_branch)%f ${COLOR_DEF}$%f '
 
+alias cdr='cd $REPO_DIR'
