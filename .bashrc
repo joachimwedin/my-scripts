@@ -1,4 +1,5 @@
-export PATH=$PATH:$(pwd)
+export PATH="$PATH:/home/joachim-wedin/repos/my-scripts"
+export PATH="$PATH:/home/joachim-wedin/.local/bin"
 
 lsc() {
     local script
