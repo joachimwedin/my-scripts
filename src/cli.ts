@@ -81,7 +81,7 @@ async function processRepo(repoDir: string, repoName: string, force: boolean, to
     console.log(`  [prune]   ${wt.path} -- ${result.reasons.join("; ")}`);
   }
   if (prunable.length > 0 && force) {
-    execFileSync("git", ["-C", repoDir, "worktree", "prune", "-v"], { stdio: "inherit" });
+    git.pruneWorktrees(repoDir);
     totals.pruned += prunable.length;
   }
 

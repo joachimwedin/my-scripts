@@ -4,7 +4,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { listWorktrees } from "../src/git.js";
+import { listWorktrees, pruneWorktrees } from "../src/git.js";
 
 /**
  * Seam-level tests for git.ts's own git-invocation functions, against real
@@ -88,5 +88,20 @@ describe("listWorktrees", () => {
 
     expect(gone.prunable).toBe(true);
     expect(gone.prunableReason).not.toBe("");
+  });
+});
+
+describe("pruneWorktrees", () => {
+  it("clears stale worktree admin data for a worktree whose directory is gone", () => {
+    const reposDir = makeTempDir("repos-");
+    const repo = initRepo(reposDir, "repo1");
+    const gonePath = path.join(reposDir, "repo1-gone");
+    addWorktree(repo, "gone-branch", gonePath);
+    fs.rmSync(gonePath, { recursive: true, force: true });
+
+    pruneWorktrees(repo);
+
+    const porcelain = git(repo, ["worktree", "list", "--porcelain"]);
+    expect(porcelain).not.toContain("repo1-gone");
   });
 });

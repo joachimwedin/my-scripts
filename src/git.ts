@@ -11,7 +11,12 @@ import type { Worktree } from "./parseWorktrees.js";
  */
 
 function runGit(cwd: string, args: string[]): string {
-  return execFileSync("git", args, { cwd, encoding: "utf8" });
+  // execFileSync's default stdio (when unset) inherits the child's stderr
+  // straight to this process's own — captured stdout alone isn't enough to
+  // keep git's own chatter (e.g. `worktree prune -v`'s per-line report) off
+  // the terminal. Piping all three streams explicitly is what actually
+  // captures output instead of streaming it live.
+  return execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 }
 
 /**
@@ -21,6 +26,16 @@ function runGit(cwd: string, args: string[]): string {
 export function listWorktrees(repoDir: string): Worktree[] {
   const porcelain = runGit(repoDir, ["worktree", "list", "--porcelain"]);
   return parseWorktrees(porcelain);
+}
+
+/**
+ * Clears stale worktree admin data for worktrees whose directories are gone.
+ * Captures git's own `-v` output rather than streaming it live; the caller
+ * already prints its own `[prune]` bucket lines before this runs, so git's
+ * text would just be redundant chatter.
+ */
+export function pruneWorktrees(repoDir: string): void {
+  runGit(repoDir, ["worktree", "prune", "-v"]);
 }
 
 /** True when the worktree at `worktreePath` has uncommitted/untracked changes. */
