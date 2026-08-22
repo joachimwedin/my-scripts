@@ -4,7 +4,14 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { gatherWorktreeFacts, listWorktrees, pruneWorktrees, removeWorktree } from "../src/git.js";
+import {
+  gatherWorktreeFacts,
+  listWorktrees,
+  pruneWorktrees,
+  removeWorktree,
+  showRef,
+  symbolicRef,
+} from "../src/git.js";
 
 /**
  * Seam-level tests for git.ts's own git-invocation functions, against real
@@ -156,6 +163,50 @@ describe("removeWorktree", () => {
     fs.writeFileSync(path.join(dirtyPath, "f.txt"), "changed\n");
     removeWorktree(repo, dirtyPath, { force: true });
     expect(git(repo, ["branch", "--list", "dirty-branch"])).toContain("dirty-branch");
+  });
+});
+
+describe("symbolicRef", () => {
+  it("resolves a real symbolic ref", () => {
+    const reposDir = makeTempDir("repos-");
+    const repo = initRepo(reposDir, "repo1");
+    const remote = initBareRemote(reposDir, "origin.git");
+    git(repo, ["remote", "add", "origin", remote]);
+    git(repo, ["push", "-q", "-u", "origin", "main"]);
+    git(repo, ["remote", "set-head", "origin", "main"]);
+
+    const result = symbolicRef(repo, "refs/remotes/origin/HEAD");
+
+    expect(result).toBe("origin/main");
+  });
+
+  it("returns null when the ref doesn't exist", () => {
+    const reposDir = makeTempDir("repos-");
+    const repo = initRepo(reposDir, "repo1");
+
+    const result = symbolicRef(repo, "refs/remotes/origin/HEAD");
+
+    expect(result).toBeNull();
+  });
+});
+
+describe("showRef", () => {
+  it("returns true when a ref exists", () => {
+    const reposDir = makeTempDir("repos-");
+    const repo = initRepo(reposDir, "repo1");
+
+    const result = showRef(repo, "refs/heads/main");
+
+    expect(result).toBe(true);
+  });
+
+  it("returns false when a ref doesn't exist", () => {
+    const reposDir = makeTempDir("repos-");
+    const repo = initRepo(reposDir, "repo1");
+
+    const result = showRef(repo, "refs/heads/nonexistent");
+
+    expect(result).toBe(false);
   });
 });
 

@@ -63,6 +63,29 @@ export function isWorkingTreeDirty(worktreePath: string): boolean {
   return runGit(worktreePath, ["status", "--porcelain"]).trim() !== "";
 }
 
+/** The short name `ref` resolves to via a symbolic ref, or null if it doesn't resolve. */
+export function symbolicRef(repoPath: string, ref: string): string | null {
+  try {
+    const resolved = execFileSync("git", ["symbolic-ref", "-q", "--short", ref], {
+      cwd: repoPath,
+      encoding: "utf8",
+    }).trim();
+    return resolved === "" ? null : resolved;
+  } catch {
+    return null;
+  }
+}
+
+/** True when `ref` resolves to a valid object. */
+export function showRef(repoPath: string, ref: string): boolean {
+  try {
+    execFileSync("git", ["show-ref", "-q", "--verify", ref], { cwd: repoPath });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * A ref to compare a worktree's branch against for "merged" status:
  * `origin/HEAD`'s target if set, else local `main`, else local `master`.
@@ -70,27 +93,14 @@ export function isWorkingTreeDirty(worktreePath: string): boolean {
  * as unconfirmed rather than guessing.
  */
 export function defaultBranchRef(repoPath: string): string | null {
-  try {
-    const ref = execFileSync(
-      "git",
-      ["symbolic-ref", "-q", "--short", "refs/remotes/origin/HEAD"],
-      { cwd: repoPath, encoding: "utf8" },
-    ).trim();
-    if (ref !== "") {
-      return ref;
-    }
-  } catch {
-    // No origin/HEAD set — fall through to the next candidate.
+  const originHead = symbolicRef(repoPath, "refs/remotes/origin/HEAD");
+  if (originHead !== null) {
+    return originHead;
   }
 
   for (const candidate of ["main", "master"]) {
-    try {
-      execFileSync("git", ["show-ref", "-q", "--verify", `refs/heads/${candidate}`], {
-        cwd: repoPath,
-      });
+    if (showRef(repoPath, `refs/heads/${candidate}`)) {
       return candidate;
-    } catch {
-      // Branch doesn't exist locally — try the next candidate.
     }
   }
 
