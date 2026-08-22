@@ -2,7 +2,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
-import { classifyWorktree, gatherWorktreeFacts } from "./classify.js";
+import { classifyWorktree } from "./classify.js";
 import * as git from "./git.js";
 import { confirm } from "./prompt.js";
 
@@ -69,7 +69,7 @@ async function processRepo(repoDir: string, repoName: string, force: boolean, to
 
   const classified = linked.map((wt) => ({
     wt,
-    result: classifyWorktree(gatherWorktreeFacts(wt, defaultBranch)),
+    result: classifyWorktree(git.gatherWorktreeFacts(wt, defaultBranch)),
   }));
 
   // Pass 1: list (and count) prunable worktrees, then prune them all at once.

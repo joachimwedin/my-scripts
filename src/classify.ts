@@ -1,6 +1,3 @@
-import * as git from "./git.js";
-import type { Worktree } from "./parseWorktrees.js";
-
 export type Bucket = "prune" | "locked" | "safe" | "confirm";
 
 /**
@@ -65,64 +62,4 @@ export function classifyWorktree(facts: WorktreeFacts): ClassifyResult {
   return reasons.length === 0
     ? { bucket: "safe", reasons: [] }
     : { bucket: "confirm", reasons };
-}
-
-/**
- * Thin fact-gathering layer: produces the facts `classifyWorktree` needs for
- * a real worktree by calling git directly, then delegates to the pure
- * decision function. Not unit-tested here — covered by the end-to-end
- * integration suite instead, since it requires real git repos.
- *
- * `defaultBranch` is computed once per repo (via `git.defaultBranchRef`) and
- * passed in, since it doesn't vary per worktree within the same repo.
- */
-export function gatherWorktreeFacts(worktree: Worktree, defaultBranch: string | null): WorktreeFacts {
-  if (worktree.prunable) {
-    // The worktree's directory is already gone -- no git commands can be
-    // run against it, and none of the other facts matter for this bucket.
-    return {
-      locked: worktree.locked,
-      lockReason: worktree.lockReason,
-      prunable: true,
-      prunableReason: worktree.prunableReason,
-      dirty: false,
-      merged: false,
-      upstream: null,
-      aheadCount: null,
-      defaultBranch,
-    };
-  }
-
-  if (worktree.locked) {
-    // Locked worktrees are never touched or prompted about -- no need to
-    // gather the rest of the facts.
-    return {
-      locked: true,
-      lockReason: worktree.lockReason,
-      prunable: false,
-      prunableReason: "",
-      dirty: false,
-      merged: false,
-      upstream: null,
-      aheadCount: null,
-      defaultBranch,
-    };
-  }
-
-  const dirty = git.isWorkingTreeDirty(worktree.path);
-  const merged = git.isMergedIntoDefault(worktree.path, defaultBranch);
-  const upstream = merged ? null : git.getUpstream(worktree.path);
-  const aheadCount = upstream === null ? null : git.aheadCount(worktree.path, upstream);
-
-  return {
-    locked: false,
-    lockReason: "",
-    prunable: false,
-    prunableReason: "",
-    dirty,
-    merged,
-    upstream,
-    aheadCount,
-    defaultBranch,
-  };
 }

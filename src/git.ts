@@ -1,13 +1,15 @@
 import { execFileSync } from "node:child_process";
 
+import type { WorktreeFacts } from "./classify.js";
 import { parseWorktrees } from "./parseWorktrees.js";
 import type { Worktree } from "./parseWorktrees.js";
 
 /**
- * Thin wrappers around `git` invocations used to gather the facts
- * `classify.ts` needs to bucket a worktree. No decision logic lives here —
- * every function either returns a raw fact or null/false when git can't
- * answer the question (e.g. no origin/HEAD set, no upstream configured).
+ * The sole seam for every real-git fact `classify.ts` needs to bucket a
+ * worktree. No decision logic lives here — every function either returns a
+ * raw fact or null/false when git can't answer the question (e.g. no
+ * origin/HEAD set, no upstream configured), or composes those raw facts
+ * (`gatherWorktreeFacts`) into the shape `classifyWorktree` decides over.
  */
 
 function runGit(cwd: string, args: string[]): string {
@@ -132,4 +134,61 @@ export function getUpstream(worktreePath: string): string | null {
 export function aheadCount(worktreePath: string, upstream: string): number {
   const out = runGit(worktreePath, ["rev-list", "--count", `${upstream}..HEAD`]).trim();
   return Number.parseInt(out, 10);
+}
+
+/**
+ * Composes the raw facts above into the shape `classifyWorktree` needs for a
+ * real worktree. `defaultBranch` is computed once per repo (via
+ * `defaultBranchRef`) and passed in, since it doesn't vary per worktree
+ * within the same repo.
+ */
+export function gatherWorktreeFacts(worktree: Worktree, defaultBranch: string | null): WorktreeFacts {
+  if (worktree.prunable) {
+    // The worktree's directory is already gone -- no git commands can be
+    // run against it, and none of the other facts matter for this bucket.
+    return {
+      locked: worktree.locked,
+      lockReason: worktree.lockReason,
+      prunable: true,
+      prunableReason: worktree.prunableReason,
+      dirty: false,
+      merged: false,
+      upstream: null,
+      aheadCount: null,
+      defaultBranch,
+    };
+  }
+
+  if (worktree.locked) {
+    // Locked worktrees are never touched or prompted about -- no need to
+    // gather the rest of the facts.
+    return {
+      locked: true,
+      lockReason: worktree.lockReason,
+      prunable: false,
+      prunableReason: "",
+      dirty: false,
+      merged: false,
+      upstream: null,
+      aheadCount: null,
+      defaultBranch,
+    };
+  }
+
+  const dirty = isWorkingTreeDirty(worktree.path);
+  const merged = isMergedIntoDefault(worktree.path, defaultBranch);
+  const upstream = merged ? null : getUpstream(worktree.path);
+  const aheadCountResult = upstream === null ? null : aheadCount(worktree.path, upstream);
+
+  return {
+    locked: false,
+    lockReason: "",
+    prunable: false,
+    prunableReason: "",
+    dirty,
+    merged,
+    upstream,
+    aheadCount: aheadCountResult,
+    defaultBranch,
+  };
 }
