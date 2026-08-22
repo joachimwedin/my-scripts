@@ -98,16 +98,11 @@ export function defaultBranchRef(repoPath: string): string | null {
 }
 
 /**
- * True when `worktreePath`'s HEAD is an ancestor of `defaultRef` (i.e. its
- * branch is merged into the repo's default branch). False when `defaultRef`
- * is null (no known default branch to compare against).
+ * True when `worktreePath`'s HEAD is an ancestor of `ref`.
  */
-export function isMergedIntoDefault(worktreePath: string, defaultRef: string | null): boolean {
-  if (defaultRef === null) {
-    return false;
-  }
+export function mergeBase(worktreePath: string, ref: string): boolean {
   try {
-    execFileSync("git", ["merge-base", "--is-ancestor", "HEAD", defaultRef], {
+    execFileSync("git", ["merge-base", "--is-ancestor", "HEAD", ref], {
       cwd: worktreePath,
     });
     return true;
@@ -176,7 +171,7 @@ export function gatherWorktreeFacts(worktree: Worktree, defaultBranch: string | 
   }
 
   const dirty = isWorkingTreeDirty(worktree.path);
-  const merged = isMergedIntoDefault(worktree.path, defaultBranch);
+  const merged = defaultBranch === null ? false : mergeBase(worktree.path, defaultBranch);
   const upstream = merged ? null : getUpstream(worktree.path);
   const aheadCountResult = upstream === null ? null : aheadCount(worktree.path, upstream);
 
