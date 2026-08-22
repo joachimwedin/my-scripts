@@ -3,14 +3,16 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import { classifyWorktree } from "./classify.js";
-import * as git from "./git.js";
+import * as gitClient from "./gitClient.js";
+import * as gitOperations from "./gitOperations.js";
 import { confirm } from "./prompt.js";
 
 /**
- * Entry point for `cleanWorktreesTs`. Orchestrates git.ts/parseWorktrees.ts/
- * classify.ts/prompt.ts to produce the exact dry-run/`--force` output shape,
- * bucket labels, and closing summary. See the shim script `cleanWorktreesTs`
- * at the repo root for how this module gets invoked from any directory.
+ * Entry point for `cleanWorktreesTs`. Orchestrates gitClient.ts/
+ * gitOperations.ts/classify.ts/prompt.ts to produce the exact dry-run/
+ * `--force` output shape, bucket labels, and closing summary. See the shim
+ * script `cleanWorktreesTs` at the repo root for how this module gets
+ * invoked from any directory.
  */
 
 function usageError(message: string): never {
@@ -55,9 +57,9 @@ function listRepoNames(reposDir: string): string[] {
 type Totals = { pruned: number; removed: number };
 
 async function processRepo(repoDir: string, repoName: string, force: boolean, totals: Totals): Promise<void> {
-  const worktrees = git.listWorktrees(repoDir);
+  const worktrees = gitClient.listWorktrees(repoDir);
   const linked = worktrees.slice(1); // index 0 is always the repo's main worktree
-  const defaultBranch = git.defaultBranchRef(repoDir);
+  const defaultBranch = gitOperations.resolveDefaultBranch(repoDir);
 
   let headerShown = false;
   const showHeader = () => {
@@ -69,7 +71,7 @@ async function processRepo(repoDir: string, repoName: string, force: boolean, to
 
   const classified = linked.map((wt) => ({
     wt,
-    result: classifyWorktree(git.gatherWorktreeFacts(wt, defaultBranch)),
+    result: classifyWorktree(gitOperations.gatherWorktreeFacts(wt, defaultBranch)),
   }));
 
   // Pass 1: list (and count) prunable worktrees, then prune them all at once.
@@ -79,7 +81,7 @@ async function processRepo(repoDir: string, repoName: string, force: boolean, to
     console.log(`  [prune]   ${wt.path} -- ${result.reasons.join("; ")}`);
   }
   if (prunable.length > 0 && force) {
-    git.pruneWorktrees(repoDir);
+    gitClient.pruneWorktrees(repoDir);
     totals.pruned += prunable.length;
   }
 
@@ -104,7 +106,7 @@ async function processRepo(repoDir: string, repoName: string, force: boolean, to
       showHeader();
       console.log(`  [safe]    ${wt.path} (${wt.branch}) -- would remove`);
       if (force) {
-        git.removeWorktree(repoDir, wt.path);
+        gitClient.removeWorktree(repoDir, wt.path);
         console.log("  -> removed");
         totals.removed += 1;
       }
@@ -117,7 +119,7 @@ async function processRepo(repoDir: string, repoName: string, force: boolean, to
     if (force) {
       const accepted = await confirm("  Remove anyway? [y/N] ");
       if (accepted) {
-        git.removeWorktree(repoDir, wt.path, { force: true });
+        gitClient.removeWorktree(repoDir, wt.path, { force: true });
         console.log("  -> removed");
         totals.removed += 1;
       } else {

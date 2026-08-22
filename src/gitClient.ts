@@ -1,15 +1,11 @@
 import { execFileSync } from "node:child_process";
 
-import type { WorktreeFacts } from "./classify.js";
-import { parseWorktrees } from "./parseWorktrees.js";
-import type { Worktree } from "./parseWorktrees.js";
-
 /**
- * The sole seam for every real-git fact `classify.ts` needs to bucket a
- * worktree. No decision logic lives here — every function either returns a
- * raw fact or null/false when git can't answer the question (e.g. no
- * origin/HEAD set, no upstream configured), or composes those raw facts
- * (`gatherWorktreeFacts`) into the shape `classifyWorktree` decides over.
+ * The sole seam for real git invocation. Every exported function here makes
+ * exactly one subprocess call, returns a structured/typed value (never a raw
+ * string a caller has to parse itself), and is named after the git operation
+ * it wraps. Functions that compose more than one of these calls into a
+ * decision-ready fact live in `gitOperations.ts` instead.
  */
 
 function runGit(cwd: string, args: string[]): string {
@@ -19,6 +15,81 @@ function runGit(cwd: string, args: string[]): string {
   // the terminal. Piping all three streams explicitly is what actually
   // captures output instead of streaming it live.
   return execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+}
+
+export const DETACHED_HEAD = "(detached)";
+
+export type Worktree = {
+  path: string;
+  /** Branch name, or DETACHED_HEAD when the worktree has no branch. */
+  branch: string;
+  locked: boolean;
+  /** "" when locked is true but no reason was given, or when not locked. */
+  lockReason: string;
+  prunable: boolean;
+  /** "" when prunable is true but no reason was given, or when not prunable. */
+  prunableReason: string;
+};
+
+/**
+ * Parses the text output of `git worktree list --porcelain` into structured
+ * worktree records. Pure function: no git commands are invoked here. The
+ * first record returned is always the repo's main worktree, matching the
+ * order `git worktree list --porcelain` itself emits.
+ */
+export function parseWorktrees(porcelainText: string): Worktree[] {
+  const records: Worktree[] = [];
+  let current: Worktree | null = null;
+
+  const flush = () => {
+    if (current !== null) {
+      records.push(current);
+      current = null;
+    }
+  };
+
+  for (const line of porcelainText.split("\n")) {
+    if (line === "") {
+      flush();
+      continue;
+    }
+
+    if (line.startsWith("worktree ")) {
+      flush();
+      current = {
+        path: line.slice("worktree ".length),
+        branch: DETACHED_HEAD,
+        locked: false,
+        lockReason: "",
+        prunable: false,
+        prunableReason: "",
+      };
+      continue;
+    }
+
+    if (current === null) {
+      continue;
+    }
+
+    if (line.startsWith("branch ")) {
+      current.branch = line.slice("branch refs/heads/".length);
+    } else if (line === "locked") {
+      current.locked = true;
+      current.lockReason = "";
+    } else if (line.startsWith("locked ")) {
+      current.locked = true;
+      current.lockReason = line.slice("locked ".length);
+    } else if (line === "prunable") {
+      current.prunable = true;
+      current.prunableReason = "";
+    } else if (line.startsWith("prunable ")) {
+      current.prunable = true;
+      current.prunableReason = line.slice("prunable ".length);
+    }
+  }
+
+  flush();
+  return records;
 }
 
 /**
@@ -87,27 +158,6 @@ export function showRef(repoPath: string, ref: string): boolean {
 }
 
 /**
- * A ref to compare a worktree's branch against for "merged" status:
- * `origin/HEAD`'s target if set, else local `main`, else local `master`.
- * Returns null if none of those resolve — callers then treat merged status
- * as unconfirmed rather than guessing.
- */
-export function defaultBranchRef(repoPath: string): string | null {
-  const originHead = symbolicRef(repoPath, "refs/remotes/origin/HEAD");
-  if (originHead !== null) {
-    return originHead;
-  }
-
-  for (const candidate of ["main", "master"]) {
-    if (showRef(repoPath, `refs/heads/${candidate}`)) {
-      return candidate;
-    }
-  }
-
-  return null;
-}
-
-/**
  * True when `worktreePath`'s HEAD is an ancestor of `ref`.
  */
 export function mergeBase(worktreePath: string, ref: string): boolean {
@@ -139,61 +189,4 @@ export function getUpstream(worktreePath: string): string | null {
 export function aheadCount(worktreePath: string, upstream: string): number {
   const out = runGit(worktreePath, ["rev-list", "--count", `${upstream}..HEAD`]).trim();
   return Number.parseInt(out, 10);
-}
-
-/**
- * Composes the raw facts above into the shape `classifyWorktree` needs for a
- * real worktree. `defaultBranch` is computed once per repo (via
- * `defaultBranchRef`) and passed in, since it doesn't vary per worktree
- * within the same repo.
- */
-export function gatherWorktreeFacts(worktree: Worktree, defaultBranch: string | null): WorktreeFacts {
-  if (worktree.prunable) {
-    // The worktree's directory is already gone -- no git commands can be
-    // run against it, and none of the other facts matter for this bucket.
-    return {
-      locked: worktree.locked,
-      lockReason: worktree.lockReason,
-      prunable: true,
-      prunableReason: worktree.prunableReason,
-      dirty: false,
-      merged: false,
-      upstream: null,
-      aheadCount: null,
-      defaultBranch,
-    };
-  }
-
-  if (worktree.locked) {
-    // Locked worktrees are never touched or prompted about -- no need to
-    // gather the rest of the facts.
-    return {
-      locked: true,
-      lockReason: worktree.lockReason,
-      prunable: false,
-      prunableReason: "",
-      dirty: false,
-      merged: false,
-      upstream: null,
-      aheadCount: null,
-      defaultBranch,
-    };
-  }
-
-  const dirty = isWorkingTreeDirty(worktree.path);
-  const merged = defaultBranch === null ? false : mergeBase(worktree.path, defaultBranch);
-  const upstream = merged ? null : getUpstream(worktree.path);
-  const aheadCountResult = upstream === null ? null : aheadCount(worktree.path, upstream);
-
-  return {
-    locked: false,
-    lockReason: "",
-    prunable: false,
-    prunableReason: "",
-    dirty,
-    merged,
-    upstream,
-    aheadCount: aheadCountResult,
-    defaultBranch,
-  };
 }

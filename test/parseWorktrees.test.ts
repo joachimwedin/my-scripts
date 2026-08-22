@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DETACHED_HEAD, parseWorktrees } from "../src/parseWorktrees.js";
+import { DETACHED_HEAD, parseWorktrees } from "../src/gitClient.js";
 
 describe("parseWorktrees", () => {
   it("returns one record per worktree in order, main worktree first", () => {
