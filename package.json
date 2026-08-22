@@ -5,7 +5,7 @@
   "description": "TypeScript tools for the my-scripts personal toolbox (e.g. cleanWorktreesTs).",
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "files=$(find src test -name '*.ts'); if [ -z \"$files\" ]; then echo 'No .ts files yet -- nothing to typecheck.'; else tsc --noEmit; fi"
   },
   "devDependencies": {
     "@types/node": "^22.13.4",
