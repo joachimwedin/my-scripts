@@ -4,7 +4,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { listWorktrees, pruneWorktrees } from "../src/git.js";
+import { listWorktrees, pruneWorktrees, removeWorktree } from "../src/git.js";
 
 /**
  * Seam-level tests for git.ts's own git-invocation functions, against real
@@ -103,5 +103,50 @@ describe("pruneWorktrees", () => {
 
     const porcelain = git(repo, ["worktree", "list", "--porcelain"]);
     expect(porcelain).not.toContain("repo1-gone");
+  });
+});
+
+describe("removeWorktree", () => {
+  it("removes a clean worktree", () => {
+    const reposDir = makeTempDir("repos-");
+    const repo = initRepo(reposDir, "repo1");
+    const cleanPath = path.join(reposDir, "repo1-clean");
+    addWorktree(repo, "clean-branch", cleanPath);
+
+    removeWorktree(repo, cleanPath);
+
+    expect(fs.existsSync(cleanPath)).toBe(false);
+    const porcelain = git(repo, ["worktree", "list", "--porcelain"]);
+    expect(porcelain).not.toContain("repo1-clean");
+  });
+
+  it("removes a dirty worktree with { force: true } that would otherwise refuse", () => {
+    const reposDir = makeTempDir("repos-");
+    const repo = initRepo(reposDir, "repo1");
+    const dirtyPath = path.join(reposDir, "repo1-dirty");
+    addWorktree(repo, "dirty-branch", dirtyPath);
+    fs.writeFileSync(path.join(dirtyPath, "f.txt"), "changed\n");
+
+    expect(() => removeWorktree(repo, dirtyPath)).toThrow();
+    expect(fs.existsSync(dirtyPath)).toBe(true);
+
+    removeWorktree(repo, dirtyPath, { force: true });
+
+    expect(fs.existsSync(dirtyPath)).toBe(false);
+  });
+
+  it("never deletes the underlying branch, clean or forced", () => {
+    const reposDir = makeTempDir("repos-");
+    const repo = initRepo(reposDir, "repo1");
+    const cleanPath = path.join(reposDir, "repo1-clean");
+    addWorktree(repo, "clean-branch", cleanPath);
+    removeWorktree(repo, cleanPath);
+    expect(git(repo, ["branch", "--list", "clean-branch"])).toContain("clean-branch");
+
+    const dirtyPath = path.join(reposDir, "repo1-dirty");
+    addWorktree(repo, "dirty-branch", dirtyPath);
+    fs.writeFileSync(path.join(dirtyPath, "f.txt"), "changed\n");
+    removeWorktree(repo, dirtyPath, { force: true });
+    expect(git(repo, ["branch", "--list", "dirty-branch"])).toContain("dirty-branch");
   });
 });

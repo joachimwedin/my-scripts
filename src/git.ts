@@ -38,6 +38,24 @@ export function pruneWorktrees(repoDir: string): void {
   runGit(repoDir, ["worktree", "prune", "-v"]);
 }
 
+/**
+ * Removes the worktree at `worktreePath` from the repo at `repoDir`. Captures
+ * git's own output rather than streaming it live; the caller already prints
+ * its own `[safe]`/`[confirm]` bucket lines and its own `-> removed` line, so
+ * git's text would just be redundant chatter. Never deletes the underlying
+ * branch -- only `opts.force` is passed through to git, which (per
+ * `git worktree remove`'s own semantics) only ever affects the worktree
+ * itself, not its branch.
+ */
+export function removeWorktree(repoDir: string, worktreePath: string, opts?: { force?: boolean }): void {
+  const args = ["worktree", "remove"];
+  if (opts?.force) {
+    args.push("--force");
+  }
+  args.push(worktreePath);
+  runGit(repoDir, args);
+}
+
 /** True when the worktree at `worktreePath` has uncommitted/untracked changes. */
 export function isWorkingTreeDirty(worktreePath: string): boolean {
   return runGit(worktreePath, ["status", "--porcelain"]).trim() !== "";

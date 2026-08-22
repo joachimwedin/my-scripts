@@ -106,7 +106,7 @@ async function processRepo(repoDir: string, repoName: string, force: boolean, to
       showHeader();
       console.log(`  [safe]    ${wt.path} (${wt.branch}) -- would remove`);
       if (force) {
-        execFileSync("git", ["-C", repoDir, "worktree", "remove", wt.path], { stdio: "inherit" });
+        git.removeWorktree(repoDir, wt.path);
         console.log("  -> removed");
         totals.removed += 1;
       }
@@ -119,9 +119,7 @@ async function processRepo(repoDir: string, repoName: string, force: boolean, to
     if (force) {
       const accepted = await confirm("  Remove anyway? [y/N] ");
       if (accepted) {
-        execFileSync("git", ["-C", repoDir, "worktree", "remove", "--force", wt.path], {
-          stdio: "inherit",
-        });
+        git.removeWorktree(repoDir, wt.path, { force: true });
         console.log("  -> removed");
         totals.removed += 1;
       } else {
