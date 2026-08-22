@@ -1,5 +1,8 @@
 import { execFileSync } from "node:child_process";
 
+import { parseWorktrees } from "./parseWorktrees.js";
+import type { Worktree } from "./parseWorktrees.js";
+
 /**
  * Thin wrappers around `git` invocations used to gather the facts
  * `classify.ts` needs to bucket a worktree. No decision logic lives here —
@@ -9,6 +12,15 @@ import { execFileSync } from "node:child_process";
 
 function runGit(cwd: string, args: string[]): string {
   return execFileSync("git", args, { cwd, encoding: "utf8" });
+}
+
+/**
+ * Every worktree in the repo at `repoDir`, main worktree first, exactly as
+ * `git worktree list --porcelain` itself orders them.
+ */
+export function listWorktrees(repoDir: string): Worktree[] {
+  const porcelain = runGit(repoDir, ["worktree", "list", "--porcelain"]);
+  return parseWorktrees(porcelain);
 }
 
 /** True when the worktree at `worktreePath` has uncommitted/untracked changes. */

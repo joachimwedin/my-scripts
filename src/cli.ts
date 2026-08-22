@@ -5,8 +5,6 @@ import * as path from "node:path";
 
 import { classifyWorktree, gatherWorktreeFacts } from "./classify.js";
 import * as git from "./git.js";
-import { parseWorktrees } from "./parseWorktrees.js";
-import type { Worktree } from "./parseWorktrees.js";
 import { confirm } from "./prompt.js";
 
 /**
@@ -56,17 +54,10 @@ function listRepoNames(reposDir: string): string[] {
     .sort((a, b) => a.localeCompare(b));
 }
 
-function listWorktrees(repoDir: string): Worktree[] {
-  const porcelain = execFileSync("git", ["-C", repoDir, "worktree", "list", "--porcelain"], {
-    encoding: "utf8",
-  });
-  return parseWorktrees(porcelain);
-}
-
 type Totals = { pruned: number; removed: number };
 
 async function processRepo(repoDir: string, repoName: string, force: boolean, totals: Totals): Promise<void> {
-  const worktrees = listWorktrees(repoDir);
+  const worktrees = git.listWorktrees(repoDir);
   const linked = worktrees.slice(1); // index 0 is always the repo's main worktree
   const defaultBranch = git.defaultBranchRef(repoDir);
 
