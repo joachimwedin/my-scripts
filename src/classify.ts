@@ -31,8 +31,8 @@ export type ClassifyResult = {
 /**
  * Pure decision function: given a worktree's already-gathered facts, decides
  * which bucket it falls into. No I/O — safe to unit test with fixture
- * objects alone. Mirrors the bash `cleanWorktrees` reference implementation
- * exactly (bucket order and reason strings).
+ * objects alone. Bucket order and reason strings are fixed and asserted by
+ * this module's own tests.
  */
 export function classifyWorktree(facts: WorktreeFacts): ClassifyResult {
   if (facts.prunable) {

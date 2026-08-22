@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# TypeScript port of cleanWorktrees -- see src/cli.ts for behavior. This shim
-# resolves its own install location independent of the caller's working
-# directory, then runs the entry point directly through the locally
-# installed tsx (no npx, no build step), so the command works from any
-# directory.
+# Cleans up git worktrees across every repo under $REPOS_DIR -- see
+# src/cli.ts for behavior. This shim resolves its own install location
+# independent of the caller's working directory, then runs the entry point
+# directly through the locally installed tsx (no npx, no build step), so the
+# command works from any directory.
 #
 # Usage:
 #   cleanWorktreesTs              # dry run -- lists prune/locked/safe/confirm per repo

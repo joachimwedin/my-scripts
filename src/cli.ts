@@ -8,10 +8,9 @@ import { confirm } from "./prompt.js";
 
 /**
  * Entry point for `cleanWorktreesTs`. Orchestrates git.ts/parseWorktrees.ts/
- * classify.ts/prompt.ts to reproduce the bash `cleanWorktrees` reference
- * implementation's exact dry-run/`--force` output shape, bucket labels, and
- * closing summary. See the shim script `cleanWorktreesTs` at the repo root
- * for how this module gets invoked from any directory.
+ * classify.ts/prompt.ts to produce the exact dry-run/`--force` output shape,
+ * bucket labels, and closing summary. See the shim script `cleanWorktreesTs`
+ * at the repo root for how this module gets invoked from any directory.
  */
 
 function usageError(message: string): never {
