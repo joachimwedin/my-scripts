@@ -2,8 +2,8 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
-    // Ticket #2 only scaffolds the project; zero test files should report
-    // zero passing, not fail the run. Later tickets add real tests.
+    // A src/test tree with zero test files should report zero passing, not
+    // fail the run (e.g. right after scaffolding, before any tests exist).
     passWithNoTests: true,
   },
 });

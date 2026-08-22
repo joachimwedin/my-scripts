@@ -146,7 +146,9 @@ async function processRepo(repoDir: string, repoName: string, force: boolean, to
 
 async function main(): Promise<void> {
   const { force } = parseArgs(process.argv.slice(2));
-  const reposDir = process.env.REPOS_DIR ?? path.join(os.homedir(), "repos");
+  // Matches bash's ${REPOS_DIR:-...}: an unset *or* empty REPOS_DIR both fall
+  // back to the default, so `??` alone (which only catches unset) isn't enough.
+  const reposDir = process.env.REPOS_DIR || path.join(os.homedir(), "repos");
 
   if (!force) {
     console.log("Dry run -- no worktrees will be modified. Pass --force to actually clean up.");
