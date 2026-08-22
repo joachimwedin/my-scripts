@@ -1,11 +1,10 @@
-import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
-import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { listWorktrees } from "../src/gitClient.js";
 import { gatherWorktreeFacts, resolveDefaultBranch } from "../src/gitOperations.js";
+import { addWorktree, createTempDirTracker, git, initBareRemote, initRepo } from "./gitFixtures.js";
 
 /**
  * Seam-level tests for gitOperations.ts's composed facts, against real
@@ -14,50 +13,8 @@ import { gatherWorktreeFacts, resolveDefaultBranch } from "../src/gitOperations.
  * cli.test.ts's end-to-end suite.
  */
 
-const tempDirs: string[] = [];
-
-function makeTempDir(prefix: string): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
-  tempDirs.push(dir);
-  return dir;
-}
-
-afterEach(() => {
-  for (const dir of tempDirs.splice(0)) {
-    fs.rmSync(dir, { recursive: true, force: true });
-  }
-});
-
-function git(cwd: string, args: string[]): string {
-  return execFileSync("git", args, { cwd, encoding: "utf8" });
-}
-
-/** Creates a real git repo at `<reposDir>/<name>` with one commit on `main`. */
-function initRepo(reposDir: string, name: string): string {
-  const repoDir = path.join(reposDir, name);
-  fs.mkdirSync(repoDir, { recursive: true });
-  git(repoDir, ["init", "-q", "-b", "main"]);
-  git(repoDir, ["config", "user.email", "test@example.com"]);
-  git(repoDir, ["config", "user.name", "Test"]);
-  fs.writeFileSync(path.join(repoDir, "f.txt"), "hi\n");
-  git(repoDir, ["add", "f.txt"]);
-  git(repoDir, ["commit", "-q", "-m", "init"]);
-  return repoDir;
-}
-
-/** Adds a real linked worktree on a new branch off `repoDir`'s current HEAD. */
-function addWorktree(repoDir: string, branch: string, worktreePath: string): void {
-  git(repoDir, ["branch", branch]);
-  git(repoDir, ["worktree", "add", "-q", worktreePath, branch]);
-}
-
-/** Creates a real bare repo at `<reposDir>/<name>`, suitable for use as a remote. */
-function initBareRemote(reposDir: string, name: string): string {
-  const remoteDir = path.join(reposDir, name);
-  fs.mkdirSync(remoteDir, { recursive: true });
-  git(remoteDir, ["init", "-q", "--bare"]);
-  return remoteDir;
-}
+const { makeTempDir, cleanup } = createTempDirTracker();
+afterEach(cleanup);
 
 describe("gatherWorktreeFacts", () => {
   it("short-circuits a locked worktree to its locked/lockReason facts without computing dirty/merged/upstream", () => {

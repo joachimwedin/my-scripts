@@ -9,10 +9,10 @@ import { afterEach, describe, expect, it } from "vitest";
  * spawns the actual shim script (not just `src/cli.ts` in-process) as a
  * subprocess against real temporary git repositories, created and torn down
  * per test, and asserts on stdout/exit code -- exactly like a user invoking
- * it from their shell. This is the only place `git.ts`'s real git-invocation
- * behavior, `gatherWorktreeFacts`'s I/O composition, and `prompt.confirm`'s
- * real tty-reading path get exercised; everything else is covered by
- * fixture-based unit tests elsewhere in this directory.
+ * it from their shell. This is the only place `gitClient.ts`'s real
+ * git-invocation behavior, `gatherWorktreeFacts`'s I/O composition, and
+ * `prompt.confirm`'s real tty-reading path get exercised; everything else is
+ * covered by fixture-based unit tests elsewhere in this directory.
  */
 
 const CLI_PATH = path.resolve(__dirname, "..", "cleanWorktreesTs");
