@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isYes } from "../src/prompt.js";
+import { isYes } from "../../src/cli/confirm.js";
 
 describe("isYes", () => {
   it("returns true for 'y'", () => {

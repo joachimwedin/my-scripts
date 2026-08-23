@@ -5,7 +5,7 @@ import * as path from "node:path";
 import { classifyWorktree } from "./classify.js";
 import * as gitClient from "./git/gitClient.js";
 import * as gitOperations from "./git/gitOperations.js";
-import { confirm } from "./prompt.js";
+import { confirm } from "./cli/confirm.js";
 
 /**
  * Entry point for `cleanWorktreesTs`. Orchestrates gitClient.ts/
