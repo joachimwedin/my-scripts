@@ -3,8 +3,8 @@ import * as path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { listWorktrees } from "git-ts/src/gitClient.js";
-import { gatherBranchFacts, gatherWorktreeFacts, listRepoNames, resolveDefaultBranch } from "../../src/git/gitOperations.js";
-import { addWorktree, createTempDirTracker, git, initBareRemote, initRepo } from "./gitFixtures.js";
+import { gatherBranchFacts, gatherSyncFacts, gatherWorktreeFacts, listRepoNames, resolveDefaultBranch } from "../../src/git/gitOperations.js";
+import { addOriginRemote, addWorktree, createTempDirTracker, git, initBareRemote, initRepo } from "./gitFixtures.js";
 
 /** Builds the `branch name -> worktree path` map `gatherBranchFacts` expects, from a real worktree list. */
 function checkedOutMap(repoDir: string): Map<string, string> {
@@ -228,6 +228,66 @@ describe("resolveDefaultBranch", () => {
     const result = resolveDefaultBranch(repoDir);
 
     expect(result).toBeNull();
+  });
+});
+
+describe("gatherSyncFacts", () => {
+  it("short-circuits an unresolvable default branch to defaultBranch: null without checking dirty/remote status", () => {
+    const reposDir = makeTempDir("repos-");
+    const repoDir = path.join(reposDir, "repo1");
+    fs.mkdirSync(repoDir, { recursive: true });
+    git(repoDir, ["init", "-q", "-b", "trunk"]);
+    git(repoDir, ["config", "user.email", "test@example.com"]);
+    git(repoDir, ["config", "user.name", "Test"]);
+    fs.writeFileSync(path.join(repoDir, "f.txt"), "hi\n");
+    git(repoDir, ["add", "f.txt"]);
+    git(repoDir, ["commit", "-q", "-m", "init"]);
+    // Genuinely dirty and remote-having, so false-y facts below can only come
+    // from the short-circuit -- not from a real (and wrong) answer.
+    fs.writeFileSync(path.join(repoDir, "f.txt"), "changed\n");
+    const remote = initBareRemote(reposDir, "origin.git");
+    addOriginRemote(repoDir, remote);
+
+    const facts = gatherSyncFacts(repoDir);
+
+    expect(facts.defaultBranch).toBeNull();
+    expect(facts.dirty).toBe(false);
+    expect(facts.hasOriginRemote).toBe(false);
+  });
+
+  it("reports a dirty working tree for a repo with a resolvable default branch", () => {
+    const reposDir = makeTempDir("repos-");
+    const repo = initRepo(reposDir, "repo1");
+    fs.writeFileSync(path.join(repo, "f.txt"), "changed\n");
+
+    const facts = gatherSyncFacts(repo);
+
+    expect(facts.defaultBranch).toBe("main");
+    expect(facts.dirty).toBe(true);
+  });
+
+  it("reports hasOriginRemote true for a repo with a real origin remote configured", () => {
+    const reposDir = makeTempDir("repos-");
+    const repo = initRepo(reposDir, "repo1");
+    const remote = initBareRemote(reposDir, "origin.git");
+    addOriginRemote(repo, remote);
+
+    const facts = gatherSyncFacts(repo);
+
+    expect(facts.defaultBranch).toBe("main");
+    expect(facts.dirty).toBe(false);
+    expect(facts.hasOriginRemote).toBe(true);
+  });
+
+  it("reports hasOriginRemote false for a repo with no remote at all", () => {
+    const reposDir = makeTempDir("repos-");
+    const repo = initRepo(reposDir, "repo1");
+
+    const facts = gatherSyncFacts(repo);
+
+    expect(facts.defaultBranch).toBe("main");
+    expect(facts.dirty).toBe(false);
+    expect(facts.hasOriginRemote).toBe(false);
   });
 });
 

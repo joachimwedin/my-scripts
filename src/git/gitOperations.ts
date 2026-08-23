@@ -3,8 +3,10 @@ import * as path from "node:path";
 
 import type { BranchFacts } from "../cleanBranches/classify.js";
 import type { WorktreeFacts } from "../cleanWorktree/classify.js";
+import type { SyncFacts } from "../syncRepos/classify.js";
 import { aheadCount, getUpstream, isWorkingTreeDirty, mergeBase, showRef, symbolicRef } from "git-ts/src/gitClient.js";
 import type { Worktree } from "git-ts/src/gitClient.js";
+import { hasOriginRemote } from "./gitClient.js";
 
 /**
  * Ready-to-use, decision-ready facts for callers -- most composed from
@@ -125,6 +127,26 @@ export function gatherBranchFacts(
   }
 
   return { checkedOutAt: null, merged: mergeBase(repoDir, branch, defaultBranch), defaultBranch };
+}
+
+/**
+ * Composes the raw facts above into the shape `classifySync` needs for a
+ * real repo. Unresolved default branch short-circuits: once
+ * `resolveDefaultBranch` fails to resolve anything, neither dirty status nor
+ * remote presence is computed, mirroring the existing locked/prunable and
+ * checked-out short-circuit precedent already used for worktrees/branches.
+ */
+export function gatherSyncFacts(repoDir: string): SyncFacts {
+  const resolved = resolveDefaultBranch(repoDir);
+  if (resolved === null) {
+    return { defaultBranch: null, dirty: false, hasOriginRemote: false };
+  }
+
+  return {
+    defaultBranch: resolved.localName,
+    dirty: isWorkingTreeDirty(repoDir),
+    hasOriginRemote: hasOriginRemote(repoDir),
+  };
 }
 
 /** Directory names directly under `reposDir` that are themselves git repos (have a `.git` directory). */
