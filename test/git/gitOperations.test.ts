@@ -3,8 +3,17 @@ import * as path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { listWorktrees } from "../../src/git/gitClient.js";
-import { gatherWorktreeFacts, listRepoNames, resolveDefaultBranch } from "../../src/git/gitOperations.js";
+import { gatherBranchFacts, gatherWorktreeFacts, listRepoNames, resolveDefaultBranch } from "../../src/git/gitOperations.js";
 import { addWorktree, createTempDirTracker, git, initBareRemote, initRepo } from "./gitFixtures.js";
+
+/** Builds the `branch name -> worktree path` map `gatherBranchFacts` expects, from a real worktree list. */
+function checkedOutMap(repoDir: string): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const worktree of listWorktrees(repoDir)) {
+    map.set(worktree.branch, worktree.path);
+  }
+  return map;
+}
 
 /**
  * Seam-level tests for gitOperations.ts's composed facts, against real
@@ -118,6 +127,51 @@ describe("gatherWorktreeFacts", () => {
     expect(facts.merged).toBe(false);
     expect(facts.upstream).toBeNull();
     expect(facts.aheadCount).toBeNull();
+  });
+});
+
+describe("gatherBranchFacts", () => {
+  it("short-circuits a checked-out branch without computing merged status", () => {
+    const reposDir = makeTempDir("repos-");
+    const repo = initRepo(reposDir, "repo1");
+    const featurePath = path.join(reposDir, "repo1-feature");
+    addWorktree(repo, "feature-branch", featurePath);
+    // Genuinely unmerged, so a false "merged: true" below can only come from
+    // the short-circuit -- not from a real (and wrong) merge-base answer.
+    fs.writeFileSync(path.join(featurePath, "g.txt"), "one\n");
+    git(featurePath, ["add", "g.txt"]);
+    git(featurePath, ["commit", "-q", "-m", "diverge"]);
+
+    const facts = gatherBranchFacts(repo, "feature-branch", "main", checkedOutMap(repo));
+
+    expect(facts.checkedOutAt).toBe(featurePath);
+    expect(facts.merged).toBe(false);
+  });
+
+  it("reports a merged, non-checked-out branch as merged", () => {
+    const reposDir = makeTempDir("repos-");
+    const repo = initRepo(reposDir, "repo1");
+    git(repo, ["branch", "merged-branch"]);
+
+    const facts = gatherBranchFacts(repo, "merged-branch", "main", checkedOutMap(repo));
+
+    expect(facts.checkedOutAt).toBeNull();
+    expect(facts.merged).toBe(true);
+  });
+
+  it("reports an unmerged, non-checked-out branch as not merged", () => {
+    const reposDir = makeTempDir("repos-");
+    const repo = initRepo(reposDir, "repo1");
+    git(repo, ["checkout", "-q", "-b", "unmerged-branch"]);
+    fs.writeFileSync(path.join(repo, "f.txt"), "changed\n");
+    git(repo, ["add", "f.txt"]);
+    git(repo, ["commit", "-q", "-m", "diverge"]);
+    git(repo, ["checkout", "-q", "main"]);
+
+    const facts = gatherBranchFacts(repo, "unmerged-branch", "main", checkedOutMap(repo));
+
+    expect(facts.checkedOutAt).toBeNull();
+    expect(facts.merged).toBe(false);
   });
 });
 
