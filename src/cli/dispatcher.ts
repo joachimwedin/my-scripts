@@ -1,3 +1,4 @@
+import { main as cleanBranchesMain, name as cleanBranchesName } from "../cleanBranches/main.js";
 import { main as cleanStashesMain, name as cleanStashesName } from "../cleanStashes/main.js";
 import { main as cleanWorktreesMain, name as cleanWorktreesName } from "../cleanWorktree/main.js";
 import { usageError } from "./args.js";
@@ -21,6 +22,7 @@ type Op = {
 };
 
 const registry: Op[] = [
+  { name: cleanBranchesName, main: cleanBranchesMain },
   { name: cleanStashesName, main: cleanStashesMain },
   { name: cleanWorktreesName, main: cleanWorktreesMain },
 ];
