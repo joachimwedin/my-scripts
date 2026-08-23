@@ -17,6 +17,23 @@ function runGit(cwd: string, args: string[]): string {
   return execFileSync("git", args, { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
 }
 
+/**
+ * Runs `runGit`, treating any failure as an expected, non-exceptional
+ * outcome: returns the trimmed stdout on success, or `null` on any thrown
+ * error instead of propagating it. The shared landing point for every
+ * "probe" below whose failure is a normal result to report, not a bug to
+ * surface — composes on top of `runGit`'s existing stdio-capture behavior
+ * rather than inventing a second one, so none of these probes can leak a
+ * git subprocess's stderr to the terminal.
+ */
+function tryRunGit(cwd: string, args: string[]): string | null {
+  try {
+    return runGit(cwd, args).trim();
+  } catch {
+    return null;
+  }
+}
+
 export const DETACHED_HEAD = "(detached)";
 
 export type Worktree = {
@@ -136,53 +153,25 @@ export function isWorkingTreeDirty(worktreePath: string): boolean {
 
 /** The short name `ref` resolves to via a symbolic ref, or null if it doesn't resolve. */
 export function symbolicRef(repoPath: string, ref: string): string | null {
-  try {
-    const resolved = execFileSync("git", ["symbolic-ref", "-q", "--short", ref], {
-      cwd: repoPath,
-      encoding: "utf8",
-    }).trim();
-    return resolved === "" ? null : resolved;
-  } catch {
-    return null;
-  }
+  const resolved = tryRunGit(repoPath, ["symbolic-ref", "-q", "--short", ref]);
+  return resolved === "" ? null : resolved;
 }
 
 /** True when `ref` resolves to a valid object. */
 export function showRef(repoPath: string, ref: string): boolean {
-  try {
-    execFileSync("git", ["show-ref", "-q", "--verify", ref], { cwd: repoPath });
-    return true;
-  } catch {
-    return false;
-  }
+  return tryRunGit(repoPath, ["show-ref", "-q", "--verify", ref]) !== null;
 }
 
 /**
  * True when `worktreePath`'s HEAD is an ancestor of `ref`.
  */
 export function mergeBase(worktreePath: string, ref: string): boolean {
-  try {
-    execFileSync("git", ["merge-base", "--is-ancestor", "HEAD", ref], {
-      cwd: worktreePath,
-    });
-    return true;
-  } catch {
-    return false;
-  }
+  return tryRunGit(worktreePath, ["merge-base", "--is-ancestor", "HEAD", ref]) !== null;
 }
 
 /** The worktree's configured upstream (e.g. "origin/feature"), or null if none. */
 export function getUpstream(worktreePath: string): string | null {
-  try {
-    const upstream = execFileSync(
-      "git",
-      ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"],
-      { cwd: worktreePath, encoding: "utf8" },
-    ).trim();
-    return upstream === "" ? null : upstream;
-  } catch {
-    return null;
-  }
+  return tryRunGit(worktreePath, ["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}"]);
 }
 
 /**

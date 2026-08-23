@@ -1,9 +1,10 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   clearStash,
+  getUpstream,
   listStash,
   listWorktrees,
   pruneWorktrees,
@@ -200,6 +201,24 @@ describe("clearStash", () => {
     const repo = initRepo(reposDir, "repo1");
 
     expect(() => clearStash(repo)).not.toThrow();
+  });
+});
+
+describe("getUpstream", () => {
+  it("does not leak git's stderr when no upstream is configured", () => {
+    const reposDir = makeTempDir("repos-");
+    const repo = initRepo(reposDir, "repo1");
+
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    let result: string | null;
+    try {
+      result = getUpstream(repo);
+    } finally {
+      stderrSpy.mockRestore();
+    }
+
+    expect(stderrSpy).not.toHaveBeenCalled();
+    expect(result).toBeNull();
   });
 });
 
