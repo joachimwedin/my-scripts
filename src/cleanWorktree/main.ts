@@ -1,15 +1,15 @@
 import * as os from "node:os";
 import * as path from "node:path";
 
-import { classifyWorktree } from "./classify.js";
+import { parseArgs } from "../cli/args.js";
+import { confirm } from "../cli/confirm.js";
 import * as gitClient from "../git/gitClient.js";
 import * as gitOperations from "../git/gitOperations.js";
-import { confirm } from "../cli/confirm.js";
-import { parseArgs } from "../cli/args.js";
+import { classifyWorktree } from "./classify.js";
 
 /**
  * Entry point for `cleanWorktreesTs`. Orchestrates gitClient.ts/
- * gitOperations.ts/classify.ts/prompt.ts to produce the exact dry-run/
+ * gitOperations.ts/classify.ts/confirm.ts to produce the exact dry-run/
  * `--force` output shape, bucket labels, and closing summary. See the shim
  * script `cleanWorktreesTs` at the repo root for how this module gets
  * invoked from any directory.

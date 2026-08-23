@@ -11,7 +11,7 @@ import { afterEach, describe, expect, it } from "vitest";
  * created and torn down per test, and asserts on stdout/exit code -- exactly
  * like a user invoking it from their shell. This is the only place
  * `gitClient.ts`'s real git-invocation behavior, `gatherWorktreeFacts`'s I/O
- * composition, and `prompt.confirm`'s real tty-reading path get exercised;
+ * composition, and `confirm.confirm`'s real tty-reading path get exercised;
  * everything else is covered by fixture-based unit tests elsewhere in this
  * directory.
  */
