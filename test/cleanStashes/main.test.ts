@@ -5,17 +5,19 @@ import * as path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 /**
- * End-to-end integration suite for the real `cleanStashesTs` command:
- * spawns the actual shim script (not just `src/cleanStashes/main.ts`
+ * End-to-end integration suite for the `clean-stashes` op, invoked via the
+ * real `run` dispatcher shim (not just `src/cleanStashes/main.ts`
  * in-process) as a subprocess against real temporary git repositories,
  * created and torn down per test, and asserts on stdout/exit code -- exactly
  * like a user invoking it from their shell. This is the only place
  * `gitClient.ts`'s real `listStash`/`clearStash` git invocation gets
  * exercised end-to-end; `test/git/gitClient.test.ts` covers those two
- * functions directly at the seam level.
+ * functions directly at the seam level. `run`'s own dispatch behavior (`ls`,
+ * unrecognized/missing subcommand) is covered separately in
+ * `test/cli/dispatcher.test.ts`.
  */
 
-const CLI_PATH = path.resolve(__dirname, "..", "..", "cleanStashesTs");
+const CLI_PATH = path.resolve(__dirname, "..", "..", "run");
 
 const tempDirs: string[] = [];
 
@@ -57,14 +59,15 @@ function addStash(repoDir: string, message: string): void {
 type RunResult = { stdout: string; exitCode: number };
 
 /**
- * Spawns the real `cleanStashesTs` shim as a subprocess, run from an
- * arbitrary cwd (never `my-scripts` itself, proving the shim resolves its
- * own install location independent of the caller's cwd).
+ * Spawns the real `run` shim as a subprocess against the `clean-stashes`
+ * subcommand, run from an arbitrary cwd (never `my-scripts` itself, proving
+ * the shim resolves its own install location independent of the caller's
+ * cwd).
  */
 function runCli(args: string[], reposDir: string): Promise<RunResult> {
   const cwd = makeTempDir("cwd-");
   return new Promise((resolve, reject) => {
-    const child = spawn(CLI_PATH, args, {
+    const child = spawn(CLI_PATH, ["clean-stashes", ...args], {
       cwd,
       env: { ...process.env, REPOS_DIR: reposDir },
       stdio: ["pipe", "pipe", "pipe"],
@@ -77,7 +80,7 @@ function runCli(args: string[], reposDir: string): Promise<RunResult> {
   });
 }
 
-describe("cleanStashesTs", () => {
+describe("run clean-stashes", () => {
   it("dry run lists each repo's stash header/listing and clears nothing", async () => {
     const reposDir = makeTempDir("repos-");
     const repo = initRepo(reposDir, "repo1");
@@ -154,7 +157,7 @@ describe("cleanStashesTs", () => {
     const arbitraryCwd = makeTempDir("elsewhere-");
 
     const result = await new Promise<RunResult>((resolve, reject) => {
-      const child = spawn(CLI_PATH, [], {
+      const child = spawn(CLI_PATH, ["clean-stashes"], {
         cwd: arbitraryCwd,
         env: { ...process.env, REPOS_DIR: reposDir },
         stdio: ["pipe", "pipe", "pipe"],

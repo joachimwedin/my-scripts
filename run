@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Dispatches to my-scripts' TypeScript ops via kebab-case subcommands -- see
+# src/cli/dispatcher.ts for the registry and dispatch/error-handling logic.
+# This shim resolves its own install location independent of the caller's
+# working directory, then runs the dispatcher directly through the locally
+# installed tsx (no npx, no build step), so the command works from any
+# directory.
+#
+# Usage:
+#   run <subcommand> [args...]   # e.g. run clean-stashes --force
+#   run ls                       # list available subcommand names
+
+set -euo pipefail
+
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+
+exec "$SCRIPT_DIR/node_modules/.bin/tsx" "$SCRIPT_DIR/src/cli/dispatcher.ts" "$@"

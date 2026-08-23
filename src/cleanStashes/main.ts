@@ -6,12 +6,15 @@ import * as gitClient from "../git/gitClient.js";
 import * as gitOperations from "../git/gitOperations.js";
 
 /**
- * Entry point for `cleanStashesTs`. A straight 1:1 port of the bash
+ * Entry point for the `clean-stashes` op, registered with the `run`
+ * dispatcher (see `src/cli/dispatcher.ts`). A straight 1:1 port of the bash
  * `clearStashes` script's logic -- list, then clear-or-don't, per repo. No
  * bucket/classification layer: unlike `cleanWorktreesTs`, stash-clearing is
- * binary. See the shim script `cleanStashesTs` at the repo root for how this
- * module gets invoked from any directory.
+ * binary.
  */
+
+/** Subcommand name this op registers under `run` -- `run clean-stashes`. */
+export const name = "clean-stashes";
 
 /** Lists (and, under `force`, clears) one repo's stashes. Returns the count cleared. */
 function processRepo(repoDir: string, repoName: string, force: boolean): number {
@@ -34,8 +37,12 @@ function processRepo(repoDir: string, repoName: string, force: boolean): number 
   return cleared;
 }
 
-function main(): void {
-  const { force } = parseArgs(process.argv.slice(2));
+/**
+ * Runs the op against `argv` (the args following `clean-stashes` on the
+ * command line -- the dispatcher forwards them unchanged, unparsed).
+ */
+export function main(argv: string[]): void {
+  const { force } = parseArgs(argv);
   // Matches bash's ${REPOS_DIR:-...}: an unset *or* empty REPOS_DIR both fall
   // back to the default, so `??` alone (which only catches unset) isn't enough.
   const reposDir = process.env.REPOS_DIR || path.join(os.homedir(), "repos");
@@ -55,11 +62,4 @@ function main(): void {
       ? `Done. Cleared ${totalCleared} stash(es) total.`
       : "Dry run complete. Re-run with --force to clear the stashes listed above.",
   );
-}
-
-try {
-  main();
-} catch (err: unknown) {
-  console.error(err instanceof Error ? err.message : String(err));
-  process.exit(1);
 }
