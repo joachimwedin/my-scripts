@@ -186,7 +186,7 @@ describe("resolveDefaultBranch", () => {
 
     const result = resolveDefaultBranch(repo);
 
-    expect(result).toBe("origin/main");
+    expect(result).toEqual({ localName: "main", mergeTarget: "origin/main" });
   });
 
   it("falls back to local main when no origin/HEAD is set", () => {
@@ -195,7 +195,7 @@ describe("resolveDefaultBranch", () => {
 
     const result = resolveDefaultBranch(repo);
 
-    expect(result).toBe("main");
+    expect(result).toEqual({ localName: "main", mergeTarget: "main" });
   });
 
   it("falls back to local master when neither origin/HEAD nor main exist", () => {
@@ -211,7 +211,7 @@ describe("resolveDefaultBranch", () => {
 
     const result = resolveDefaultBranch(repoDir);
 
-    expect(result).toBe("master");
+    expect(result).toEqual({ localName: "master", mergeTarget: "master" });
   });
 
   it("returns null when none of origin/HEAD, main, or master resolve", () => {

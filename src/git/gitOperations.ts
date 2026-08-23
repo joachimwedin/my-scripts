@@ -16,20 +16,31 @@ import type { Worktree } from "./gitClient.js";
  */
 
 /**
- * A ref to compare a worktree's branch against for "merged" status:
- * `origin/HEAD`'s target if set, else local `main`, else local `master`.
- * Returns null if none of those resolve -- callers then treat merged status
- * as unconfirmed rather than guessing.
+ * The repo's resolved default branch, split into the two things callers need
+ * that only coincide when there's no remote-tracking ref to prefer:
+ * `localName` is always a plain local branch name -- directly comparable
+ * against `gitClient.listBranches`' output, so callers can exclude the
+ * default branch from candidates by identity. `mergeTarget` is whichever ref
+ * is authoritative for "merged" ancestry checks and reason-text display: the
+ * remote-tracking ref (e.g. `"origin/main"`) when `origin/HEAD` resolves,
+ * otherwise identical to `localName`. Resolution order: `origin/HEAD` first,
+ * then local `main`, then local `master`. Returns null if none of those
+ * resolve -- callers then treat merged status as unconfirmed rather than
+ * guessing (both fields are only ever meaningful together -- never partially
+ * resolved).
  */
-export function resolveDefaultBranch(repoPath: string): string | null {
+export function resolveDefaultBranch(repoPath: string): { localName: string; mergeTarget: string } | null {
   const originHead = symbolicRef(repoPath, "refs/remotes/origin/HEAD");
   if (originHead !== null) {
-    return originHead;
+    // The remote this codebase ever inspects is always hardcoded as `origin`,
+    // so the local name is recovered by stripping that literal prefix off the
+    // resolved short ref -- no new git call needed.
+    return { localName: originHead.replace(/^origin\//, ""), mergeTarget: originHead };
   }
 
   for (const candidate of ["main", "master"]) {
     if (showRef(repoPath, `refs/heads/${candidate}`)) {
-      return candidate;
+      return { localName: candidate, mergeTarget: candidate };
     }
   }
 

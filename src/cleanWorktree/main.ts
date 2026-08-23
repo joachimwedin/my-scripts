@@ -22,7 +22,8 @@ type Totals = { pruned: number; removed: number };
 async function processRepo(repoDir: string, repoName: string, force: boolean, totals: Totals): Promise<void> {
   const worktrees = gitClient.listWorktrees(repoDir);
   const linked = worktrees.slice(1); // index 0 is always the repo's main worktree
-  const defaultBranch = gitOperations.resolveDefaultBranch(repoDir);
+  const resolvedDefaultBranch = gitOperations.resolveDefaultBranch(repoDir);
+  const defaultBranch = resolvedDefaultBranch === null ? null : resolvedDefaultBranch.mergeTarget;
 
   let headerShown = false;
   const showHeader = () => {

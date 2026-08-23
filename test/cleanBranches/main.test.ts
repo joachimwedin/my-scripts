@@ -280,6 +280,40 @@ describe("run clean-branches", () => {
     expect(stdout).toContain("-> deleted");
   });
 
+  it("a repo with a real origin remote and origin/HEAD configured still protects its default branch, even when it isn't checked out in any worktree", async () => {
+    const reposDir = makeTempDir("repos-");
+    const repo = initRepo(reposDir, "repo1");
+    const remoteDir = path.join(reposDir, "origin.git");
+    fs.mkdirSync(remoteDir, { recursive: true });
+    git(remoteDir, ["init", "-q", "--bare"]);
+    git(repo, ["remote", "add", "origin", remoteDir]);
+    git(repo, ["push", "-q", "-u", "origin", "main"]);
+    git(repo, ["remote", "set-head", "origin", "main"]);
+    addMergedBranch(repo, "safe-branch");
+    // Move the main worktree off "main" so the default branch isn't checked
+    // out anywhere -- this is the exact scenario the identity-mismatch bug
+    // let slip through: resolveDefaultBranch used to return "origin/main"
+    // (remote-qualified), which never matched the plain local branch name
+    // "main", so the exclusion filter silently never fired.
+    git(repo, ["checkout", "-q", "-b", "other-branch"]);
+
+    const dryRun = await runCli([], reposDir);
+    expect(dryRun.exitCode).toBe(0);
+    expect(dryRun.stdout).not.toMatch(/\[(current|safe|confirm)\]\s+main\b/);
+
+    const { stdout, exitCode } = await runCli(["--force"], reposDir);
+
+    expect(exitCode).toBe(0);
+    expect(stdout).not.toMatch(/\[(current|safe|confirm)\]\s+main\b/);
+    expect(localBranches(repo)).toContain("main");
+    // An ordinary merged branch in the same repo still classifies and
+    // auto-deletes normally in the same run -- the fix targets only the
+    // identity check, not classification generally.
+    expect(stdout).toMatch(/\[safe\]\s+safe-branch -- would delete/);
+    expect(stdout).toContain("-> deleted");
+    expect(localBranches(repo)).not.toContain("safe-branch");
+  });
+
   it("a single branch's delete failure is caught, reported inline, and doesn't abort the run", async () => {
     const reposDir = makeTempDir("repos-");
     const repo1 = initRepo(reposDir, "repo1");

@@ -26,13 +26,14 @@ const UNRESOLVED_DEFAULT_BRANCH_REASON =
   "couldn't resolve a default branch (checked origin/HEAD, local main, local master)";
 
 async function processRepo(repoDir: string, repoName: string, force: boolean, totals: Totals): Promise<void> {
-  const defaultBranch = gitOperations.resolveDefaultBranch(repoDir);
-  if (defaultBranch === null) {
+  const resolvedDefaultBranch = gitOperations.resolveDefaultBranch(repoDir);
+  if (resolvedDefaultBranch === null) {
     console.log(`== ${repoName} ==`);
     console.log(`  skipped -- ${UNRESOLVED_DEFAULT_BRANCH_REASON}`);
     console.log();
     return;
   }
+  const { localName: defaultBranchLocalName, mergeTarget: defaultBranch } = resolvedDefaultBranch;
 
   // Built once per repo, not recomputed per branch -- mirrors defaultBranch above.
   const checkedOutBranches = new Map<string, string>();
@@ -42,7 +43,7 @@ async function processRepo(repoDir: string, repoName: string, force: boolean, to
     }
   }
 
-  const branches = gitClient.listBranches(repoDir).filter((branch) => branch !== defaultBranch);
+  const branches = gitClient.listBranches(repoDir).filter((branch) => branch !== defaultBranchLocalName);
 
   let headerShown = false;
   const showHeader = () => {
