@@ -1,4 +1,4 @@
-import type { WorktreeFacts } from "./classify.js";
+import type { WorktreeFacts } from "../classify.js";
 import { aheadCount, getUpstream, isWorkingTreeDirty, mergeBase, showRef, symbolicRef } from "./gitClient.js";
 import type { Worktree } from "./gitClient.js";
 

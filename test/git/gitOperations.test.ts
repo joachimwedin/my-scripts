@@ -2,8 +2,8 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { listWorktrees } from "../src/gitClient.js";
-import { gatherWorktreeFacts, resolveDefaultBranch } from "../src/gitOperations.js";
+import { listWorktrees } from "../../src/git/gitClient.js";
+import { gatherWorktreeFacts, resolveDefaultBranch } from "../../src/git/gitOperations.js";
 import { addWorktree, createTempDirTracker, git, initBareRemote, initRepo } from "./gitFixtures.js";
 
 /**
