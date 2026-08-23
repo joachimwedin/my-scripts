@@ -7,7 +7,9 @@ import * as path from "node:path";
  * Shared real-git-repo fixture helpers for gitClient.test.ts's and
  * gitOperations.test.ts's seam-level tests -- no CLI subprocess, no mocking,
  * no pty. Each test file owns its own `createTempDirTracker()` instance, so
- * cleanup state never leaks between files.
+ * cleanup state never leaks between files. Fixtures that existed only to
+ * support the operations now ported to `git-ts` (e.g. a stash-creating
+ * helper) live in `git-ts`'s own copy of this file instead.
  */
 
 export function git(cwd: string, args: string[]): string {
@@ -60,8 +62,3 @@ export function initBareRemote(reposDir: string, name: string): string {
   return remoteDir;
 }
 
-/** Stashes a change to `f.txt` in `repoDir` under `message`, creating one real stash entry. */
-export function addStash(repoDir: string, message: string): void {
-  fs.writeFileSync(path.join(repoDir, "f.txt"), `changed-${message}\n`);
-  git(repoDir, ["stash", "push", "-m", message]);
-}

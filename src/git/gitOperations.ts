@@ -3,8 +3,8 @@ import * as path from "node:path";
 
 import type { BranchFacts } from "../cleanBranches/classify.js";
 import type { WorktreeFacts } from "../cleanWorktree/classify.js";
-import { aheadCount, getUpstream, isWorkingTreeDirty, mergeBase, showRef, symbolicRef } from "./gitClient.js";
-import type { Worktree } from "./gitClient.js";
+import { aheadCount, getUpstream, isWorkingTreeDirty, mergeBase, showRef, symbolicRef } from "git-ts/src/gitClient.js";
+import type { Worktree } from "git-ts/src/gitClient.js";
 
 /**
  * Ready-to-use, decision-ready facts for callers -- most composed from

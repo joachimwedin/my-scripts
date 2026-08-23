@@ -3,7 +3,8 @@ import * as path from "node:path";
 
 import { parseArgs } from "../cli/args.js";
 import { confirm } from "../cli/confirm.js";
-import * as gitClient from "../git/gitClient.js";
+import { deleteBranch, listBranches } from "../git/gitClient.js";
+import { DETACHED_HEAD, listWorktrees } from "git-ts/src/gitClient.js";
 import * as gitOperations from "../git/gitOperations.js";
 import { classifyBranch } from "./classify.js";
 
@@ -37,13 +38,13 @@ async function processRepo(repoDir: string, repoName: string, force: boolean, to
 
   // Built once per repo, not recomputed per branch -- mirrors defaultBranch above.
   const checkedOutBranches = new Map<string, string>();
-  for (const wt of gitClient.listWorktrees(repoDir)) {
-    if (wt.branch !== gitClient.DETACHED_HEAD) {
+  for (const wt of listWorktrees(repoDir)) {
+    if (wt.branch !== DETACHED_HEAD) {
       checkedOutBranches.set(wt.branch, wt.path);
     }
   }
 
-  const branches = gitClient.listBranches(repoDir).filter((branch) => branch !== defaultBranchLocalName);
+  const branches = listBranches(repoDir).filter((branch) => branch !== defaultBranchLocalName);
 
   let headerShown = false;
   const showHeader = () => {
@@ -55,7 +56,7 @@ async function processRepo(repoDir: string, repoName: string, force: boolean, to
 
   const deleteAndReport = (branch: string, opts?: { force?: boolean }) => {
     try {
-      gitClient.deleteBranch(repoDir, branch, opts);
+      deleteBranch(repoDir, branch, opts);
       console.log("  -> deleted");
       totals.deleted += 1;
     } catch (err) {

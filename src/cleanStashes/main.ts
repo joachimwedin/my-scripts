@@ -2,7 +2,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import { parseArgs } from "../cli/args.js";
-import * as gitClient from "../git/gitClient.js";
+import * as gitClient from "git-ts/src/gitClient.js";
 import * as gitOperations from "../git/gitOperations.js";
 
 /**
