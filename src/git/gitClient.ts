@@ -185,6 +185,20 @@ export function getUpstream(worktreePath: string): string | null {
   }
 }
 
+/**
+ * Every stash entry in `repoPath`, newest first, matching `git stash list`'s
+ * own order. Empty array when the repo has no stashes.
+ */
+export function listStash(repoPath: string): string[] {
+  const out = runGit(repoPath, ["stash", "list"]);
+  return out === "" ? [] : out.trimEnd().split("\n");
+}
+
+/** Clears every stash entry in `repoPath`. Does not error when there are zero stashes. */
+export function clearStash(repoPath: string): void {
+  runGit(repoPath, ["stash", "clear"]);
+}
+
 /** How many commits `worktreePath`'s HEAD is ahead of `upstream`. */
 export function aheadCount(worktreePath: string, upstream: string): number {
   const out = runGit(worktreePath, ["rev-list", "--count", `${upstream}..HEAD`]).trim();

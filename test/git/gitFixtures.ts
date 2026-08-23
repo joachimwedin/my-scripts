@@ -59,3 +59,9 @@ export function initBareRemote(reposDir: string, name: string): string {
   git(remoteDir, ["init", "-q", "--bare"]);
   return remoteDir;
 }
+
+/** Stashes a change to `f.txt` in `repoDir` under `message`, creating one real stash entry. */
+export function addStash(repoDir: string, message: string): void {
+  fs.writeFileSync(path.join(repoDir, "f.txt"), `changed-${message}\n`);
+  git(repoDir, ["stash", "push", "-m", message]);
+}

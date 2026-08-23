@@ -2,8 +2,16 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { listWorktrees, pruneWorktrees, removeWorktree, showRef, symbolicRef } from "../../src/git/gitClient.js";
-import { addWorktree, createTempDirTracker, git, initBareRemote, initRepo } from "./gitFixtures.js";
+import {
+  clearStash,
+  listStash,
+  listWorktrees,
+  pruneWorktrees,
+  removeWorktree,
+  showRef,
+  symbolicRef,
+} from "../../src/git/gitClient.js";
+import { addStash, addWorktree, createTempDirTracker, git, initBareRemote, initRepo } from "./gitFixtures.js";
 
 /**
  * Seam-level tests for gitClient.ts's own git-invocation functions, against
@@ -137,6 +145,61 @@ describe("symbolicRef", () => {
     const result = symbolicRef(repo, "refs/remotes/origin/HEAD");
 
     expect(result).toBeNull();
+  });
+});
+
+describe("listStash", () => {
+  it("returns an empty array when there are no stashes", () => {
+    const reposDir = makeTempDir("repos-");
+    const repo = initRepo(reposDir, "repo1");
+
+    const result = listStash(repo);
+
+    expect(result).toEqual([]);
+  });
+
+  it("returns one entry for a single stash", () => {
+    const reposDir = makeTempDir("repos-");
+    const repo = initRepo(reposDir, "repo1");
+    addStash(repo, "wip1");
+
+    const result = listStash(repo);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toContain("wip1");
+  });
+
+  it("returns multiple entries, newest first", () => {
+    const reposDir = makeTempDir("repos-");
+    const repo = initRepo(reposDir, "repo1");
+    addStash(repo, "wip1");
+    addStash(repo, "wip2");
+
+    const result = listStash(repo);
+
+    expect(result).toHaveLength(2);
+    expect(result[0]).toContain("wip2");
+    expect(result[1]).toContain("wip1");
+  });
+});
+
+describe("clearStash", () => {
+  it("clears every stash entry", () => {
+    const reposDir = makeTempDir("repos-");
+    const repo = initRepo(reposDir, "repo1");
+    addStash(repo, "wip1");
+    addStash(repo, "wip2");
+
+    clearStash(repo);
+
+    expect(listStash(repo)).toEqual([]);
+  });
+
+  it("does not error when there are zero stashes", () => {
+    const reposDir = makeTempDir("repos-");
+    const repo = initRepo(reposDir, "repo1");
+
+    expect(() => clearStash(repo)).not.toThrow();
   });
 });
 
