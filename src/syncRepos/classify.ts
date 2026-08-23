@@ -13,10 +13,21 @@ export type SyncFacts = {
   hasOriginRemote: boolean;
 };
 
-export type ClassifyResult = {
-  outcome: Outcome;
-  reasons: string[];
-};
+/**
+ * One variant per `Outcome`, each its own single-literal member -- required
+ * for `result.outcome === "..."` to narrow the union at all (TypeScript only
+ * narrows a discriminated union across members with a single literal
+ * discriminant each, not a union of literals per member). "no-remote"/"sync"
+ * are only ever reached once `defaultBranch` has actually resolved, so those
+ * two carry it along: callers acting on those outcomes get a real `string`
+ * checkout target straight from the narrowed type, with no cast back onto
+ * the original (still-nullable) facts needed to recover it.
+ */
+export type ClassifyResult =
+  | { outcome: "no-default-branch"; reasons: string[] }
+  | { outcome: "dirty"; reasons: string[] }
+  | { outcome: "no-remote"; reasons: string[]; defaultBranch: string }
+  | { outcome: "sync"; reasons: string[]; defaultBranch: string };
 
 /**
  * Pure decision function: given a repo's already-gathered facts, decides
@@ -35,8 +46,8 @@ export function classifySync(facts: SyncFacts): ClassifyResult {
   }
 
   if (!facts.hasOriginRemote) {
-    return { outcome: "no-remote", reasons: [] };
+    return { outcome: "no-remote", reasons: [], defaultBranch: facts.defaultBranch };
   }
 
-  return { outcome: "sync", reasons: [] };
+  return { outcome: "sync", reasons: [], defaultBranch: facts.defaultBranch };
 }

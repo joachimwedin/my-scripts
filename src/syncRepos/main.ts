@@ -46,10 +46,10 @@ function processRepo(repoDir: string, repoName: string, totals: Totals): void {
     return;
   }
 
-  // `classifySync` only reaches "no-remote"/"sync" once `resolveDefaultBranch`
-  // has actually resolved something, so `facts.defaultBranch` is guaranteed
-  // non-null here even though its type is still `string | null`.
-  const defaultBranch = facts.defaultBranch as string;
+  // `result.defaultBranch` only exists on the "no-remote"/"sync" branches of
+  // `ClassifyResult` -- reaching here already proves it's a real `string`,
+  // with no cast needed to recover it.
+  const { defaultBranch } = result;
 
   if (result.outcome === "no-remote") {
     try {
