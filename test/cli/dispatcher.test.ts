@@ -31,7 +31,7 @@ describe("run", () => {
     const { stdout, exitCode } = await runCli(["ls"]);
 
     expect(exitCode).toBe(0);
-    expect(stdout.trim().split("\n")).toEqual(["clean-stashes"]);
+    expect(stdout.trim().split("\n")).toEqual(["clean-stashes", "clean-worktrees"]);
   });
 
   it("an unrecognized subcommand is a usage error and exits non-zero", async () => {

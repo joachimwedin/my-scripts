@@ -1,4 +1,5 @@
 import { main as cleanStashesMain, name as cleanStashesName } from "../cleanStashes/main.js";
+import { main as cleanWorktreesMain, name as cleanWorktreesName } from "../cleanWorktree/main.js";
 import { usageError } from "./args.js";
 
 /**
@@ -19,7 +20,10 @@ type Op = {
   main: (argv: string[]) => void | Promise<void>;
 };
 
-const registry: Op[] = [{ name: cleanStashesName, main: cleanStashesMain }];
+const registry: Op[] = [
+  { name: cleanStashesName, main: cleanStashesMain },
+  { name: cleanWorktreesName, main: cleanWorktreesMain },
+];
 
 async function dispatch(argv: string[]): Promise<void> {
   const [subcommand, ...rest] = argv;

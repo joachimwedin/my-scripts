@@ -5,18 +5,19 @@ import * as path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 /**
- * End-to-end integration suite for the real `cleanWorktreesTs` command:
- * spawns the actual shim script (not just `src/cleanWorktree/main.ts`
+ * End-to-end integration suite for the `clean-worktrees` op, invoked via the
+ * real `run` dispatcher shim (not just `src/cleanWorktree/main.ts`
  * in-process) as a subprocess against real temporary git repositories,
  * created and torn down per test, and asserts on stdout/exit code -- exactly
  * like a user invoking it from their shell. This is the only place
  * `gitClient.ts`'s real git-invocation behavior, `gatherWorktreeFacts`'s I/O
  * composition, and `confirm.confirm`'s real tty-reading path get exercised;
  * everything else is covered by fixture-based unit tests elsewhere in this
- * directory.
+ * directory. `run`'s own dispatch behavior (`ls`, unrecognized/missing
+ * subcommand) is covered separately in `test/cli/dispatcher.test.ts`.
  */
 
-const CLI_PATH = path.resolve(__dirname, "..", "..", "cleanWorktreesTs");
+const CLI_PATH = path.resolve(__dirname, "..", "..", "run");
 
 const tempDirs: string[] = [];
 
@@ -72,16 +73,16 @@ function localBranches(repoDir: string): string[] {
 type RunResult = { stdout: string; exitCode: number };
 
 /**
- * Spawns the real `cleanWorktreesTs` shim as a subprocess, run from an
- * arbitrary cwd (never `my-scripts` itself, proving the shim resolves its
- * own install location independent of the caller's cwd). stdin is a plain
- * pipe -- no real tty attached, matching how the command runs under
- * automation.
+ * Spawns the real `run` shim as a subprocess against the `clean-worktrees`
+ * subcommand, run from an arbitrary cwd (never `my-scripts` itself, proving
+ * the shim resolves its own install location independent of the caller's
+ * cwd). stdin is a plain pipe -- no real tty attached, matching how the
+ * command runs under automation.
  */
 function runCli(args: string[], reposDir: string): Promise<RunResult> {
   const cwd = makeTempDir("cwd-");
   return new Promise((resolve, reject) => {
-    const child = spawn(CLI_PATH, args, {
+    const child = spawn(CLI_PATH, ["clean-worktrees", ...args], {
       cwd,
       env: { ...process.env, REPOS_DIR: reposDir },
       stdio: ["pipe", "pipe", "pipe"],
@@ -95,16 +96,16 @@ function runCli(args: string[], reposDir: string): Promise<RunResult> {
 }
 
 /**
- * Spawns the real `cleanWorktreesTs` shim connected to a real pseudo-tty
- * (via the `script` utility -- no extra native/npm dependency needed), waits
- * for the confirm prompt text to appear, then writes `answer` to it. This is
- * what actually exercises `prompt.confirm`'s tty-reading branch end-to-end;
- * a plain piped stdin (see `runCli`) always takes the non-tty "skip" branch,
- * by design.
+ * Spawns the real `run` shim connected to a real pseudo-tty (via the
+ * `script` utility -- no extra native/npm dependency needed) against the
+ * `clean-worktrees` subcommand, waits for the confirm prompt text to appear,
+ * then writes `answer` to it. This is what actually exercises
+ * `prompt.confirm`'s tty-reading branch end-to-end; a plain piped stdin (see
+ * `runCli`) always takes the non-tty "skip" branch, by design.
  */
 function runCliWithTtyAnswer(args: string[], reposDir: string, answer: string): Promise<RunResult> {
   const cwd = makeTempDir("cwd-");
-  const quotedArgs = args.map((a) => `'${a}'`).join(" ");
+  const quotedArgs = ["clean-worktrees", ...args].map((a) => `'${a}'`).join(" ");
   const command = `REPOS_DIR='${reposDir}' '${CLI_PATH}' ${quotedArgs}`;
 
   return new Promise((resolve, reject) => {
@@ -127,7 +128,7 @@ function runCliWithTtyAnswer(args: string[], reposDir: string, answer: string): 
   });
 }
 
-describe("cleanWorktreesTs", () => {
+describe("run clean-worktrees", () => {
   it("dry run lists prune/locked/safe/confirm buckets per repo and changes nothing", async () => {
     const reposDir = makeTempDir("repos-");
     const repo = initRepo(reposDir, "repo1");
@@ -318,7 +319,7 @@ describe("cleanWorktreesTs", () => {
     const arbitraryCwd = makeTempDir("elsewhere-");
 
     const result = await new Promise<RunResult>((resolve, reject) => {
-      const child = spawn(CLI_PATH, [], {
+      const child = spawn(CLI_PATH, ["clean-worktrees"], {
         cwd: arbitraryCwd,
         env: { ...process.env, REPOS_DIR: reposDir },
         stdio: ["pipe", "pipe", "pipe"],

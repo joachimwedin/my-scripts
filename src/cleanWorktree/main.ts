@@ -8,12 +8,14 @@ import * as gitOperations from "../git/gitOperations.js";
 import { classifyWorktree } from "./classify.js";
 
 /**
- * Entry point for `cleanWorktreesTs`. Orchestrates gitClient.ts/
+ * Entry point for the `clean-worktrees` op, registered with the `run`
+ * dispatcher (see `src/cli/dispatcher.ts`). Orchestrates gitClient.ts/
  * gitOperations.ts/classify.ts/confirm.ts to produce the exact dry-run/
- * `--force` output shape, bucket labels, and closing summary. See the shim
- * script `cleanWorktreesTs` at the repo root for how this module gets
- * invoked from any directory.
+ * `--force` output shape, bucket labels, and closing summary.
  */
+
+/** Subcommand name this op registers under `run` -- `run clean-worktrees`. */
+export const name = "clean-worktrees";
 
 type Totals = { pruned: number; removed: number };
 
@@ -94,8 +96,12 @@ async function processRepo(repoDir: string, repoName: string, force: boolean, to
   }
 }
 
-async function main(): Promise<void> {
-  const { force } = parseArgs(process.argv.slice(2));
+/**
+ * Runs the op against `argv` (the args following `clean-worktrees` on the
+ * command line -- the dispatcher forwards them unchanged, unparsed).
+ */
+export async function main(argv: string[]): Promise<void> {
+  const { force } = parseArgs(argv);
   // Matches bash's ${REPOS_DIR:-...}: an unset *or* empty REPOS_DIR both fall
   // back to the default, so `??` alone (which only catches unset) isn't enough.
   const reposDir = process.env.REPOS_DIR || path.join(os.homedir(), "repos");
@@ -117,8 +123,3 @@ async function main(): Promise<void> {
       : "Dry run complete. Re-run with --force to prune/remove/confirm the worktrees listed above.",
   );
 }
-
-main().catch((err: unknown) => {
-  console.error(err instanceof Error ? err.message : String(err));
-  process.exit(1);
-});
