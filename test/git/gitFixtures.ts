@@ -62,3 +62,25 @@ export function initBareRemote(reposDir: string, name: string): string {
   return remoteDir;
 }
 
+/** Configures `repoDir`'s `origin` remote to point at `remoteDir`. */
+export function addOriginRemote(repoDir: string, remoteDir: string): void {
+  git(repoDir, ["remote", "add", "origin", remoteDir]);
+}
+
+/**
+ * Clones `remoteDir` into a real working repo at `<reposDir>/<name>`,
+ * checking out `branch` explicitly (`git clone -b <branch>`) rather than
+ * relying on the bare remote's own HEAD -- which `initBareRemote` never
+ * points at any real branch, so an unqualified clone can't check one out.
+ * `user.name`/`user.email` are configured so the clone can make its own
+ * commits (e.g. to exercise a diverged-history pull). Its `origin` remote
+ * and upstream tracking branch are set up by `git clone` itself.
+ */
+export function cloneRepo(remoteDir: string, reposDir: string, name: string, branch = "main"): string {
+  git(reposDir, ["clone", "-q", "-b", branch, remoteDir, name]);
+  const repoDir = path.join(reposDir, name);
+  git(repoDir, ["config", "user.email", "test@example.com"]);
+  git(repoDir, ["config", "user.name", "Test"]);
+  return repoDir;
+}
+
