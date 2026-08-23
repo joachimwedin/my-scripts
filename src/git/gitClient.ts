@@ -163,10 +163,12 @@ export function showRef(repoPath: string, ref: string): boolean {
 }
 
 /**
- * True when `worktreePath`'s HEAD is an ancestor of `ref`.
+ * True when `subject` is an ancestor of `target` in `repoPath`. Pass `"HEAD"`
+ * as `subject` to check a worktree's own checked-out branch; pass a plain
+ * branch name to check a branch with no worktree of its own.
  */
-export function mergeBase(worktreePath: string, ref: string): boolean {
-  return tryRunGit(worktreePath, ["merge-base", "--is-ancestor", "HEAD", ref]) !== null;
+export function mergeBase(repoPath: string, subject: string, target: string): boolean {
+  return tryRunGit(repoPath, ["merge-base", "--is-ancestor", subject, target]) !== null;
 }
 
 /** The worktree's configured upstream (e.g. "origin/feature"), or null if none. */

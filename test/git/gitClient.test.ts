@@ -7,6 +7,7 @@ import {
   getUpstream,
   listStash,
   listWorktrees,
+  mergeBase,
   pruneWorktrees,
   removeWorktree,
   showRef,
@@ -219,6 +220,44 @@ describe("getUpstream", () => {
 
     expect(stderrSpy).not.toHaveBeenCalled();
     expect(result).toBeNull();
+  });
+});
+
+describe("mergeBase", () => {
+  it("returns true when HEAD (explicitly passed as the subject) is an ancestor of the target", () => {
+    const reposDir = makeTempDir("repos-");
+    const repo = initRepo(reposDir, "repo1");
+
+    const result = mergeBase(repo, "HEAD", "main");
+
+    expect(result).toBe(true);
+  });
+
+  it("returns true when a plain branch name (not HEAD) is an ancestor of the target", () => {
+    const reposDir = makeTempDir("repos-");
+    const repo = initRepo(reposDir, "repo1");
+    git(repo, ["branch", "merged-branch"]);
+    fs.writeFileSync(path.join(repo, "f.txt"), "changed\n");
+    git(repo, ["add", "f.txt"]);
+    git(repo, ["commit", "-q", "-m", "second"]);
+
+    const result = mergeBase(repo, "merged-branch", "main");
+
+    expect(result).toBe(true);
+  });
+
+  it("returns false when a plain branch name is not an ancestor of the target", () => {
+    const reposDir = makeTempDir("repos-");
+    const repo = initRepo(reposDir, "repo1");
+    git(repo, ["checkout", "-q", "-b", "unmerged-branch"]);
+    fs.writeFileSync(path.join(repo, "f.txt"), "changed\n");
+    git(repo, ["add", "f.txt"]);
+    git(repo, ["commit", "-q", "-m", "diverge"]);
+    git(repo, ["checkout", "-q", "main"]);
+
+    const result = mergeBase(repo, "unmerged-branch", "main");
+
+    expect(result).toBe(false);
   });
 });
 

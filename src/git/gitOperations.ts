@@ -75,7 +75,7 @@ export function gatherWorktreeFacts(worktree: Worktree, defaultBranch: string | 
   }
 
   const dirty = isWorkingTreeDirty(worktree.path);
-  const merged = defaultBranch === null ? false : mergeBase(worktree.path, defaultBranch);
+  const merged = defaultBranch === null ? false : mergeBase(worktree.path, "HEAD", defaultBranch);
   const upstream = merged ? null : getUpstream(worktree.path);
   const aheadCountResult = upstream === null ? null : aheadCount(worktree.path, upstream);
 
