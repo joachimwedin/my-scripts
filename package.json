@@ -2,7 +2,7 @@
   "name": "my-scripts",
   "version": "1.0.0",
   "private": true,
-  "description": "TypeScript tools for the my-scripts personal toolbox (e.g. cleanWorktreesTs).",
+  "description": "TypeScript tools for the my-scripts personal toolbox (e.g. `run clean-worktrees`).",
   "scripts": {
     "test": "vitest run",
     "typecheck": "files=$(find src test -name '*.ts'); if [ -z \"$files\" ]; then echo 'No .ts files yet -- nothing to typecheck.'; else tsc --noEmit; fi"

@@ -9,7 +9,7 @@ import * as gitOperations from "../git/gitOperations.js";
  * Entry point for the `clean-stashes` op, registered with the `run`
  * dispatcher (see `src/cli/dispatcher.ts`). A straight 1:1 port of the bash
  * `clearStashes` script's logic -- list, then clear-or-don't, per repo. No
- * bucket/classification layer: unlike `cleanWorktreesTs`, stash-clearing is
+ * bucket/classification layer: unlike `clean-worktrees`, stash-clearing is
  * binary.
  */
 
