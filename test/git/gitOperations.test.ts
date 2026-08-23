@@ -3,7 +3,7 @@ import * as path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { listWorktrees } from "../../src/git/gitClient.js";
-import { gatherWorktreeFacts, resolveDefaultBranch } from "../../src/git/gitOperations.js";
+import { gatherWorktreeFacts, listRepoNames, resolveDefaultBranch } from "../../src/git/gitOperations.js";
 import { addWorktree, createTempDirTracker, git, initBareRemote, initRepo } from "./gitFixtures.js";
 
 /**
@@ -174,5 +174,43 @@ describe("resolveDefaultBranch", () => {
     const result = resolveDefaultBranch(repoDir);
 
     expect(result).toBeNull();
+  });
+});
+
+describe("listRepoNames", () => {
+  it("returns sorted repo names for directories containing a .git subdirectory", () => {
+    const reposDir = makeTempDir("repos-");
+    initRepo(reposDir, "zebra");
+    initRepo(reposDir, "alpha");
+
+    const result = listRepoNames(reposDir);
+
+    expect(result).toEqual(["alpha", "zebra"]);
+  });
+
+  it("excludes directories without a .git subdirectory", () => {
+    const reposDir = makeTempDir("repos-");
+    initRepo(reposDir, "repo1");
+    fs.mkdirSync(path.join(reposDir, "not-a-repo"));
+
+    const result = listRepoNames(reposDir);
+
+    expect(result).toEqual(["repo1"]);
+  });
+
+  it("excludes non-directory entries", () => {
+    const reposDir = makeTempDir("repos-");
+    initRepo(reposDir, "repo1");
+    fs.writeFileSync(path.join(reposDir, "not-a-dir.txt"), "hi\n");
+
+    const result = listRepoNames(reposDir);
+
+    expect(result).toEqual(["repo1"]);
+  });
+
+  it("returns an empty array when reposDir doesn't exist", () => {
+    const result = listRepoNames("/nonexistent/path/does/not/exist");
+
+    expect(result).toEqual([]);
   });
 });

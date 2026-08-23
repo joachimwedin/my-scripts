@@ -1,11 +1,17 @@
+import * as fs from "node:fs";
+import * as path from "node:path";
+
 import type { WorktreeFacts } from "../classify.js";
 import { aheadCount, getUpstream, isWorkingTreeDirty, mergeBase, showRef, symbolicRef } from "./gitClient.js";
 import type { Worktree } from "./gitClient.js";
 
 /**
- * Composes `gitClient` calls into decision-ready facts. No decision logic of
- * its own lives here -- that's `classify.ts`'s job; this module only answers
- * questions that take more than one raw git fact to answer.
+ * Ready-to-use, decision-ready facts for callers -- most composed from
+ * multiple `gitClient` calls, but not exclusively; `listRepoNames` below
+ * answers its question via `fs` directly. No decision logic of its own lives
+ * here -- that's `classify.ts`'s job; this module only answers questions
+ * that take more than one raw fact (or a different mechanism than a single
+ * git subprocess call) to answer.
  */
 
 /**
@@ -84,4 +90,26 @@ export function gatherWorktreeFacts(worktree: Worktree, defaultBranch: string | 
     aheadCount: aheadCountResult,
     defaultBranch,
   };
+}
+
+/** Directory names directly under `reposDir` that are themselves git repos (have a `.git` directory). */
+export function listRepoNames(reposDir: string): string[] {
+  let entries: fs.Dirent[];
+  try {
+    entries = fs.readdirSync(reposDir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+
+  return entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .filter((name) => {
+      try {
+        return fs.statSync(path.join(reposDir, name, ".git")).isDirectory();
+      } catch {
+        return false;
+      }
+    })
+    .sort((a, b) => a.localeCompare(b));
 }

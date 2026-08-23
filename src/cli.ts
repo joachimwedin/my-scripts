@@ -1,4 +1,3 @@
-import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
@@ -30,28 +29,6 @@ function parseArgs(argv: string[]): { force: boolean } {
     }
   }
   return { force };
-}
-
-/** Directory names directly under `reposDir` that are themselves git repos (have a `.git` directory). */
-function listRepoNames(reposDir: string): string[] {
-  let entries: fs.Dirent[];
-  try {
-    entries = fs.readdirSync(reposDir, { withFileTypes: true });
-  } catch {
-    return [];
-  }
-
-  return entries
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .filter((name) => {
-      try {
-        return fs.statSync(path.join(reposDir, name, ".git")).isDirectory();
-      } catch {
-        return false;
-      }
-    })
-    .sort((a, b) => a.localeCompare(b));
 }
 
 type Totals = { pruned: number; removed: number };
@@ -146,7 +123,7 @@ async function main(): Promise<void> {
 
   const totals: Totals = { pruned: 0, removed: 0 };
 
-  for (const repoName of listRepoNames(reposDir)) {
+  for (const repoName of gitOperations.listRepoNames(reposDir)) {
     await processRepo(path.join(reposDir, repoName), repoName, force, totals);
   }
 
