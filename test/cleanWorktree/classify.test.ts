@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { classifyWorktree, type WorktreeFacts } from "../src/classify.js";
+import { classifyWorktree, type WorktreeFacts } from "../../src/cleanWorktree/classify.js";
 
 // Baseline "everything fine" facts; each test overrides only what it needs
 // to isolate a single bucketing decision, matching the bash reference

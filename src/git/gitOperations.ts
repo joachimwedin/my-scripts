@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-import type { WorktreeFacts } from "../classify.js";
+import type { WorktreeFacts } from "../cleanWorktree/classify.js";
 import { aheadCount, getUpstream, isWorkingTreeDirty, mergeBase, showRef, symbolicRef } from "./gitClient.js";
 import type { Worktree } from "./gitClient.js";
 

@@ -2,9 +2,10 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import { classifyWorktree } from "./classify.js";
-import * as gitClient from "./git/gitClient.js";
-import * as gitOperations from "./git/gitOperations.js";
-import { confirm } from "./cli/confirm.js";
+import * as gitClient from "../git/gitClient.js";
+import * as gitOperations from "../git/gitOperations.js";
+import { confirm } from "../cli/confirm.js";
+import { parseArgs } from "../cli/args.js";
 
 /**
  * Entry point for `cleanWorktreesTs`. Orchestrates gitClient.ts/
@@ -13,23 +14,6 @@ import { confirm } from "./cli/confirm.js";
  * script `cleanWorktreesTs` at the repo root for how this module gets
  * invoked from any directory.
  */
-
-function usageError(message: string): never {
-  console.error(message);
-  process.exit(1);
-}
-
-function parseArgs(argv: string[]): { force: boolean } {
-  let force = false;
-  for (const arg of argv) {
-    if (arg === "--force") {
-      force = true;
-    } else {
-      usageError(`Unknown argument: ${arg}`);
-    }
-  }
-  return { force };
-}
 
 type Totals = { pruned: number; removed: number };
 
