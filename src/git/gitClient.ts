@@ -119,6 +119,16 @@ export function listWorktrees(repoDir: string): Worktree[] {
 }
 
 /**
+ * Every local branch name in `repoDir`, sourced from `refs/heads/`. Empty
+ * array when the repo has no branches yet (e.g. a freshly initialized repo
+ * with no commits).
+ */
+export function listBranches(repoDir: string): string[] {
+  const out = runGit(repoDir, ["for-each-ref", "--format=%(refname:short)", "refs/heads/"]).trim();
+  return out === "" ? [] : out.split("\n");
+}
+
+/**
  * Clears stale worktree admin data for worktrees whose directories are gone.
  * Captures git's own `-v` output rather than streaming it live; the caller
  * already prints its own `[prune]` bucket lines before this runs, so git's
@@ -144,6 +154,18 @@ export function removeWorktree(repoDir: string, worktreePath: string, opts?: { f
   }
   args.push(worktreePath);
   runGit(repoDir, args);
+}
+
+/**
+ * Deletes the local branch `branch` in `repoDir`. Defaults to git's safe
+ * `-d` form, which throws when the branch isn't merged into its current/
+ * upstream branch -- a second, independent gate beyond this tool's own
+ * classification; `opts.force` switches to the `-D` form, which deletes
+ * regardless of merge status. Mirrors `removeWorktree`'s `{ force? }`-flag
+ * pattern.
+ */
+export function deleteBranch(repoDir: string, branch: string, opts?: { force?: boolean }): void {
+  runGit(repoDir, ["branch", opts?.force ? "-D" : "-d", branch]);
 }
 
 /** True when the worktree at `worktreePath` has uncommitted/untracked changes. */
