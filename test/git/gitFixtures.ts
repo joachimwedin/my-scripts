@@ -4,12 +4,13 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 /**
- * Shared real-git-repo fixture helpers for gitClient.test.ts's and
- * gitOperations.test.ts's seam-level tests -- no CLI subprocess, no mocking,
- * no pty. Each test file owns its own `createTempDirTracker()` instance, so
- * cleanup state never leaks between files. Fixtures that existed only to
- * support the operations now ported to `git-ts` (e.g. a stash-creating
- * helper) live in `git-ts`'s own copy of this file instead.
+ * Shared real-git-repo fixture helpers for gitOperations.test.ts's seam-level
+ * tests and syncRepos/main.test.ts's end-to-end tests -- no CLI subprocess
+ * (beyond the CLI-under-test itself), no mocking, no pty. Each test file
+ * owns its own `createTempDirTracker()` instance, so cleanup state never
+ * leaks between files. Fixtures that existed only to support the operations
+ * now ported to `git-ts` (e.g. a stash-creating helper) live in `git-ts`'s
+ * own copy of this file instead.
  */
 
 export function git(cwd: string, args: string[]): string {

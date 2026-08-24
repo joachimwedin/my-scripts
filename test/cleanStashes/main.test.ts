@@ -10,9 +10,9 @@ import { afterEach, describe, expect, it } from "vitest";
  * in-process) as a subprocess against real temporary git repositories,
  * created and torn down per test, and asserts on stdout/exit code -- exactly
  * like a user invoking it from their shell. This is the only place
- * `gitClient.ts`'s real `listStash`/`clearStash` git invocation gets
- * exercised end-to-end; `test/git/gitClient.test.ts` covers those two
- * functions directly at the seam level. `run`'s own dispatch behavior (`ls`,
+ * git-ts's real `listStash`/`clearStash` git invocation gets exercised
+ * end-to-end; git-ts's own test suite covers those two functions directly
+ * at the seam level. `run`'s own dispatch behavior (`ls`,
  * unrecognized/missing subcommand) is covered separately in
  * `test/cli/dispatcher.test.ts`.
  */

@@ -11,8 +11,9 @@ import { addOriginRemote, cloneRepo, createTempDirTracker, git, initBareRemote, 
  * subprocess against real temporary git repositories -- including a real
  * bare-repo `origin` for the scenarios that need an actual pull -- and
  * asserts on stdout/exit code, exactly like a user invoking it from their
- * shell. `test/git/gitClient.test.ts` covers `checkout`/`pull`/
- * `hasOriginRemote` directly at the seam level; `test/syncRepos/
+ * shell. git-ts's own test suite covers `checkout`/`pull` directly at the
+ * seam level, and `test/git/gitOperations.test.ts` covers `hasOriginRemote`
+ * (derived from git-ts's `getOriginRemoteUrl`); `test/syncRepos/
  * classify.test.ts` covers the pure classification logic. `run`'s own
  * dispatch behavior (`ls`, unrecognized/missing subcommand) is covered
  * separately in `test/cli/dispatcher.test.ts`.

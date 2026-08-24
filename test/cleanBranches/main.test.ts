@@ -10,11 +10,11 @@ import { afterEach, describe, expect, it } from "vitest";
  * in-process) as a subprocess against real temporary git repositories,
  * created and torn down per test, and asserts on stdout/exit code -- exactly
  * like a user invoking it from their shell. This is the only place
- * `gitClient.ts`'s real git-invocation behavior, `gatherBranchFacts`'s I/O
+ * git-ts's real git-invocation behavior, `gatherBranchFacts`'s I/O
  * composition, and `confirm.confirm`'s real tty-reading path get exercised
  * together for branches; everything else is covered by fixture-based unit
  * tests elsewhere (`test/cleanBranches/classify.test.ts`,
- * `test/git/gitClient.test.ts`, `test/git/gitOperations.test.ts`). `run`'s
+ * `test/git/gitOperations.test.ts`, and git-ts's own test suite). `run`'s
  * own dispatch behavior (`ls`, unrecognized/missing subcommand) is covered
  * separately in `test/cli/dispatcher.test.ts`. Mirrors
  * `test/cleanWorktree/main.test.ts`'s shape and helpers.
