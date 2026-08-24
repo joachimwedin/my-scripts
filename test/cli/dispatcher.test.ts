@@ -31,7 +31,13 @@ describe("run", () => {
     const { stdout, exitCode } = await runCli(["ls"]);
 
     expect(exitCode).toBe(0);
-    expect(stdout.trim().split("\n")).toEqual(["clean-branches", "clean-stashes", "clean-worktrees", "sync-repos"]);
+    expect(stdout.trim().split("\n")).toEqual([
+      "clean-branches",
+      "clean-stashes",
+      "clean-worktrees",
+      "ensure-pristine",
+      "sync-repos",
+    ]);
   });
 
   it("an unrecognized subcommand is a usage error and exits non-zero", async () => {

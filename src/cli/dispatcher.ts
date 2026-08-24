@@ -1,6 +1,7 @@
 import { main as cleanBranchesMain, name as cleanBranchesName } from "../cleanBranches/main.js";
 import { main as cleanStashesMain, name as cleanStashesName } from "../cleanStashes/main.js";
 import { main as cleanWorktreesMain, name as cleanWorktreesName } from "../cleanWorktree/main.js";
+import { main as ensurePristineMain, name as ensurePristineName } from "../ensurePristine/main.js";
 import { main as syncReposMain, name as syncReposName } from "../syncRepos/main.js";
 import { usageError } from "./args.js";
 
@@ -26,6 +27,7 @@ const registry: Op[] = [
   { name: cleanBranchesName, main: cleanBranchesMain },
   { name: cleanStashesName, main: cleanStashesMain },
   { name: cleanWorktreesName, main: cleanWorktreesMain },
+  { name: ensurePristineName, main: ensurePristineMain },
   { name: syncReposName, main: syncReposMain },
 ];
 
