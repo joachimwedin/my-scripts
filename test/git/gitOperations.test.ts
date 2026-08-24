@@ -3,8 +3,8 @@ import * as path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { listWorktrees } from "git-ts/src/gitClient.js";
-import { gatherBranchFacts, gatherSyncFacts, gatherWorktreeFacts, listRepoNames, resolveDefaultBranch } from "../../src/git/gitOperations.js";
-import { addOriginRemote, addWorktree, createTempDirTracker, git, initBareRemote, initRepo } from "./gitFixtures.js";
+import { compareToRemote, gatherBranchFacts, gatherSyncFacts, gatherWorktreeFacts, listRepoNames, resolveDefaultBranch } from "../../src/git/gitOperations.js";
+import { addOriginRemote, cloneRepo, addWorktree, createTempDirTracker, git, initBareRemote, initRepo } from "./gitFixtures.js";
 
 /** Builds the `branch name -> worktree path` map `gatherBranchFacts` expects, from a real worktree list. */
 function checkedOutMap(repoDir: string): Map<string, string> {
@@ -288,6 +288,80 @@ describe("gatherSyncFacts", () => {
     expect(facts.defaultBranch).toBe("main");
     expect(facts.dirty).toBe(false);
     expect(facts.hasOriginRemote).toBe(false);
+  });
+});
+
+describe("compareToRemote", () => {
+  it("reports up-to-date when the local branch and remote ref are at the same commit", () => {
+    const reposDir = makeTempDir("repos-");
+    const remote = initBareRemote(reposDir, "origin.git");
+    const upstream = initRepo(reposDir, "upstream");
+    addOriginRemote(upstream, remote);
+    git(upstream, ["push", "-q", "origin", "main"]);
+    const local = cloneRepo(remote, reposDir, "local");
+
+    const result = compareToRemote(local, "main", "origin/main");
+
+    expect(result).toBe("up-to-date");
+  });
+
+  it("reports fast-forwardable when the local branch is behind the remote ref", () => {
+    const reposDir = makeTempDir("repos-");
+    const remote = initBareRemote(reposDir, "origin.git");
+    const upstream = initRepo(reposDir, "upstream");
+    addOriginRemote(upstream, remote);
+    git(upstream, ["push", "-q", "origin", "main"]);
+    const local = cloneRepo(remote, reposDir, "local");
+
+    fs.writeFileSync(path.join(upstream, "f.txt"), "second\n");
+    git(upstream, ["add", "f.txt"]);
+    git(upstream, ["commit", "-q", "-m", "second"]);
+    git(upstream, ["push", "-q", "origin", "main"]);
+    git(local, ["fetch", "-q", "origin"]);
+
+    const result = compareToRemote(local, "main", "origin/main");
+
+    expect(result).toBe("fast-forwardable");
+  });
+
+  it("reports ahead when the local branch has commits the remote ref doesn't", () => {
+    const reposDir = makeTempDir("repos-");
+    const remote = initBareRemote(reposDir, "origin.git");
+    const upstream = initRepo(reposDir, "upstream");
+    addOriginRemote(upstream, remote);
+    git(upstream, ["push", "-q", "origin", "main"]);
+    const local = cloneRepo(remote, reposDir, "local");
+
+    fs.writeFileSync(path.join(local, "g.txt"), "local only\n");
+    git(local, ["add", "g.txt"]);
+    git(local, ["commit", "-q", "-m", "ahead"]);
+
+    const result = compareToRemote(local, "main", "origin/main");
+
+    expect(result).toBe("ahead");
+  });
+
+  it("reports diverged when the local branch and remote ref each have commits the other lacks", () => {
+    const reposDir = makeTempDir("repos-");
+    const remote = initBareRemote(reposDir, "origin.git");
+    const upstream = initRepo(reposDir, "upstream");
+    addOriginRemote(upstream, remote);
+    git(upstream, ["push", "-q", "origin", "main"]);
+    const local = cloneRepo(remote, reposDir, "local");
+
+    fs.writeFileSync(path.join(upstream, "remote-file.txt"), "remote change\n");
+    git(upstream, ["add", "remote-file.txt"]);
+    git(upstream, ["commit", "-q", "-m", "remote change"]);
+    git(upstream, ["push", "-q", "origin", "main"]);
+
+    fs.writeFileSync(path.join(local, "local-file.txt"), "local change\n");
+    git(local, ["add", "local-file.txt"]);
+    git(local, ["commit", "-q", "-m", "local change"]);
+    git(local, ["fetch", "-q", "origin"]);
+
+    const result = compareToRemote(local, "main", "origin/main");
+
+    expect(result).toBe("diverged");
   });
 });
 

@@ -156,6 +156,39 @@ export function gatherSyncFacts(repoDir: string): SyncFacts {
   };
 }
 
+/**
+ * Classifies the relationship between `localBranch` and `remoteRef` (e.g.
+ * `"origin/main"`) in `repoDir`, from two `mergeBase` ancestry checks -- one
+ * each direction: whether `localBranch` is an ancestor of `remoteRef`, and
+ * whether `remoteRef` is an ancestor of `localBranch`. Combines the two
+ * booleans into a single outcome:
+ * - both true (same commit) -- `"up-to-date"`.
+ * - only `localBranch` is an ancestor -- the local branch is behind and
+ *   nothing local is missing from the remote -- `"fast-forwardable"`.
+ * - only `remoteRef` is an ancestor -- the local branch has commits the
+ *   remote lacks and nothing remote is missing locally -- `"ahead"`.
+ * - neither is an ancestor of the other -- `"diverged"`.
+ */
+export function compareToRemote(
+  repoDir: string,
+  localBranch: string,
+  remoteRef: string,
+): "up-to-date" | "fast-forwardable" | "ahead" | "diverged" {
+  const localIsAncestorOfRemote = mergeBase(repoDir, localBranch, remoteRef);
+  const remoteIsAncestorOfLocal = mergeBase(repoDir, remoteRef, localBranch);
+
+  if (localIsAncestorOfRemote && remoteIsAncestorOfLocal) {
+    return "up-to-date";
+  }
+  if (localIsAncestorOfRemote) {
+    return "fast-forwardable";
+  }
+  if (remoteIsAncestorOfLocal) {
+    return "ahead";
+  }
+  return "diverged";
+}
+
 /** Directory names directly under `reposDir` that are themselves git repos (have a `.git` directory). */
 export function listRepoNames(reposDir: string): string[] {
   let entries: fs.Dirent[];
