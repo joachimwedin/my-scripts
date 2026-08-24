@@ -7,6 +7,10 @@ import { execFileSync } from "node:child_process";
  * points for its imports). Every exported function here makes exactly one
  * subprocess call and returns a structured/typed value, matching `git-ts`'s
  * own seam convention.
+ *
+ * `listBranches` and `deleteBranch` have already been ported to `git-ts`
+ * (Spec #49); `hasOriginRemote`, `checkout`, and `pull` remain here until
+ * their own child tickets port them too.
  */
 
 function runGit(cwd: string, args: string[]): string {
@@ -29,28 +33,6 @@ function tryRunGit(cwd: string, args: string[]): string | null {
   } catch {
     return null;
   }
-}
-
-/**
- * Every local branch name in `repoDir`, sourced from `refs/heads/`. Empty
- * array when the repo has no branches yet (e.g. a freshly initialized repo
- * with no commits).
- */
-export function listBranches(repoDir: string): string[] {
-  const out = runGit(repoDir, ["for-each-ref", "--format=%(refname:short)", "refs/heads/"]).trim();
-  return out === "" ? [] : out.split("\n");
-}
-
-/**
- * Deletes the local branch `branch` in `repoDir`. Defaults to git's safe
- * `-d` form, which throws when the branch isn't merged into its current/
- * upstream branch -- a second, independent gate beyond this tool's own
- * classification; `opts.force` switches to the `-D` form, which deletes
- * regardless of merge status. Mirrors `removeWorktree`'s `{ force? }`-flag
- * pattern.
- */
-export function deleteBranch(repoDir: string, branch: string, opts?: { force?: boolean }): void {
-  runGit(repoDir, ["branch", opts?.force ? "-D" : "-d", branch]);
 }
 
 /**

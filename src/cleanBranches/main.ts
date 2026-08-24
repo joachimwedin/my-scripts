@@ -3,8 +3,7 @@ import * as path from "node:path";
 
 import { parseArgs } from "../cli/args.js";
 import { confirm } from "../cli/confirm.js";
-import { deleteBranch, listBranches } from "../git/gitClient.js";
-import { DETACHED_HEAD, listWorktrees } from "git-ts/src/gitClient.js";
+import { DETACHED_HEAD, deleteBranch, listBranches, listWorktrees } from "git-ts/src/gitClient.js";
 import * as gitOperations from "../git/gitOperations.js";
 import { classifyBranch } from "./classify.js";
 

@@ -21,7 +21,7 @@ import { hasOriginRemote } from "./gitClient.js";
  * The repo's resolved default branch, split into the two things callers need
  * that only coincide when there's no remote-tracking ref to prefer:
  * `localName` is always a plain local branch name -- directly comparable
- * against `gitClient.listBranches`' output, so callers can exclude the
+ * against `listBranches`' output, so callers can exclude the
  * default branch from candidates by identity. `mergeTarget` is whichever ref
  * is authoritative for "merged" ancestry checks and reason-text display: the
  * remote-tracking ref (e.g. `"origin/main"`) when `origin/HEAD` resolves,
