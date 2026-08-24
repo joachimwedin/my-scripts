@@ -1,5 +1,6 @@
 import { classifyBranch, type BranchFacts, type Bucket as BranchBucket } from "../cleanBranches/classify.js";
 import { classifyWorktree, type WorktreeFacts, type Bucket as WorktreeBucket } from "../cleanWorktree/classify.js";
+import type { OriginComparison } from "../git/gitOperations.js";
 
 /**
  * Already-gathered facts about a single repo, sufficient for
@@ -20,7 +21,7 @@ export type PristineFacts = {
   /** True when the repo has an `origin` remote configured. */
   hasOriginRemote: boolean;
   /** How the default branch compares to `origin`; null when there's no `origin` remote (not applicable). */
-  originComparison: "up-to-date" | "fast-forwardable" | "ahead" | "diverged" | null;
+  originComparison: OriginComparison | null;
   /** Every local branch other than the default branch, by name, with its own facts. */
   extraBranches: { name: string; facts: BranchFacts }[];
   /** Every worktree other than the main one, by path, with its own facts. */

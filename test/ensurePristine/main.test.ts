@@ -1,8 +1,9 @@
-import { execFileSync, spawn } from "node:child_process";
+import { spawn } from "node:child_process";
 import * as fs from "node:fs";
-import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+
+import { addOriginRemote, addWorktree, createTempDirTracker, git, initBareRemote, initRepo } from "../git/gitFixtures.js";
 
 /**
  * End-to-end integration suite for the `ensure-pristine` op, invoked via the
@@ -17,69 +18,19 @@ import { afterEach, describe, expect, it } from "vitest";
  * (`test/ensurePristine/classify.test.ts`, `test/git/gitOperations.test.ts`,
  * `test/git/gitClient.test.ts`). `run`'s own dispatch behavior (`ls`,
  * unrecognized/missing subcommand) is covered separately in
- * `test/cli/dispatcher.test.ts`. Mirrors `test/cleanBranches/main.test.ts`/
- * `test/cleanWorktree/main.test.ts`'s shape and helpers, plus the
- * origin/clone helpers `test/git/gitOperations.test.ts` uses for
- * `compareToRemote` coverage.
+ * `test/cli/dispatcher.test.ts`. Reuses `test/git/gitFixtures.ts`'s shared
+ * repo/remote/worktree helpers exactly as `test/syncRepos/main.test.ts` and
+ * `test/git/gitOperations.test.ts` already do, rather than redefining local
+ * copies -- `gitFixtures.ts`'s own `addOriginRemote` only adds the remote
+ * pointer, so a push plus `remote set-head` follows explicitly at each call
+ * site here, matching that same established convention.
  */
 
 const CLI_PATH = path.resolve(__dirname, "..", "..", "run");
 
-const tempDirs: string[] = [];
+const { makeTempDir, cleanup } = createTempDirTracker();
 
-function makeTempDir(prefix: string): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
-  tempDirs.push(dir);
-  return dir;
-}
-
-afterEach(() => {
-  for (const dir of tempDirs.splice(0)) {
-    fs.rmSync(dir, { recursive: true, force: true });
-  }
-});
-
-function git(cwd: string, args: string[]): string {
-  return execFileSync("git", args, { cwd, encoding: "utf8" });
-}
-
-/** Creates a real git repo at `<reposDir>/<name>` with one commit on `main`. */
-function initRepo(reposDir: string, name: string): string {
-  const repoDir = path.join(reposDir, name);
-  fs.mkdirSync(repoDir, { recursive: true });
-  git(repoDir, ["init", "-q", "-b", "main"]);
-  git(repoDir, ["config", "user.email", "test@example.com"]);
-  git(repoDir, ["config", "user.name", "Test"]);
-  fs.writeFileSync(path.join(repoDir, "f.txt"), "hi\n");
-  git(repoDir, ["add", "f.txt"]);
-  git(repoDir, ["commit", "-q", "-m", "init"]);
-  return repoDir;
-}
-
-/** Creates a real bare repo at `<reposDir>/<name>`, suitable for use as a remote. */
-function initBareRemote(reposDir: string, name: string): string {
-  const remoteDir = path.join(reposDir, name);
-  fs.mkdirSync(remoteDir, { recursive: true });
-  git(remoteDir, ["init", "-q", "--bare"]);
-  return remoteDir;
-}
-
-/**
- * Configures `repoDir`'s `origin` remote to point at `remoteDir`, pushes
- * `main`, and sets `origin/HEAD` -- everything `resolveDefaultBranch` needs
- * to resolve the remote-qualified merge target.
- */
-function addOriginRemote(repoDir: string, remoteDir: string): void {
-  git(repoDir, ["remote", "add", "origin", remoteDir]);
-  git(repoDir, ["push", "-q", "-u", "origin", "main"]);
-  git(repoDir, ["remote", "set-head", "origin", "main"]);
-}
-
-/** Adds a real linked worktree on a new branch off `repoDir`'s current HEAD. */
-function addWorktree(repoDir: string, branch: string, worktreePath: string): void {
-  git(repoDir, ["branch", branch]);
-  git(repoDir, ["worktree", "add", "-q", worktreePath, branch]);
-}
+afterEach(() => cleanup());
 
 function localBranches(repoDir: string): string[] {
   return git(repoDir, ["for-each-ref", "--format=%(refname:short)", "refs/heads/"])
@@ -257,6 +208,8 @@ describe("run ensure-pristine", () => {
     const remote = initBareRemote(reposDir, "origin.git");
     const upstream = initRepo(reposDir, "upstream");
     addOriginRemote(upstream, remote);
+    git(upstream, ["push", "-q", "-u", "origin", "main"]);
+    git(upstream, ["remote", "set-head", "origin", "main"]);
 
     // Clone repo1 while it's still up-to-date, *then* advance and push a
     // second commit on the upstream side, and `fetch` (without merging) in
@@ -294,6 +247,8 @@ describe("run ensure-pristine", () => {
     const remote = initBareRemote(reposDir, "origin.git");
     const repo = initRepo(reposDir, "repo1");
     addOriginRemote(repo, remote);
+    git(repo, ["push", "-q", "-u", "origin", "main"]);
+    git(repo, ["remote", "set-head", "origin", "main"]);
     fs.writeFileSync(path.join(repo, "g.txt"), "local only\n");
     git(repo, ["add", "g.txt"]);
     git(repo, ["commit", "-q", "-m", "ahead"]);
@@ -317,6 +272,8 @@ describe("run ensure-pristine", () => {
     const remote = initBareRemote(reposDir, "origin.git");
     const upstream = initRepo(reposDir, "upstream");
     addOriginRemote(upstream, remote);
+    git(upstream, ["push", "-q", "-u", "origin", "main"]);
+    git(upstream, ["remote", "set-head", "origin", "main"]);
 
     git(reposDir, ["clone", "-q", "-b", "main", remote, "repo1"]);
     const repo = path.join(reposDir, "repo1");

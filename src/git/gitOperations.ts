@@ -161,6 +161,13 @@ export function gatherSyncFacts(repoDir: string): SyncFacts {
 }
 
 /**
+ * How a local branch compares to a remote ref -- the outcome shape
+ * `compareToRemote` returns and `PristineFacts.originComparison`
+ * (`ensurePristine/classify.ts`) reuses directly, so the two never drift.
+ */
+export type OriginComparison = "up-to-date" | "fast-forwardable" | "ahead" | "diverged";
+
+/**
  * Classifies the relationship between `localBranch` and `remoteRef` (e.g.
  * `"origin/main"`) in `repoDir`, from two `mergeBase` ancestry checks -- one
  * each direction: whether `localBranch` is an ancestor of `remoteRef`, and
@@ -173,11 +180,7 @@ export function gatherSyncFacts(repoDir: string): SyncFacts {
  *   remote lacks and nothing remote is missing locally -- `"ahead"`.
  * - neither is an ancestor of the other -- `"diverged"`.
  */
-export function compareToRemote(
-  repoDir: string,
-  localBranch: string,
-  remoteRef: string,
-): "up-to-date" | "fast-forwardable" | "ahead" | "diverged" {
+export function compareToRemote(repoDir: string, localBranch: string, remoteRef: string): OriginComparison {
   const localIsAncestorOfRemote = mergeBase(repoDir, localBranch, remoteRef);
   const remoteIsAncestorOfLocal = mergeBase(repoDir, remoteRef, localBranch);
 
