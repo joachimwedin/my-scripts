@@ -2,8 +2,8 @@ import * as os from "node:os";
 import * as path from "node:path";
 
 import { usageError } from "../cli/args.js";
-import { checkout, pull } from "../git/gitClient.js";
 import * as gitOperations from "../git/gitOperations.js";
+import { checkout, pull } from "git-ts/src/gitClient.js";
 import { classifySync } from "./classify.js";
 
 /**

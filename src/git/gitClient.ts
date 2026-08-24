@@ -8,9 +8,9 @@ import { execFileSync } from "node:child_process";
  * subprocess call and returns a structured/typed value, matching `git-ts`'s
  * own seam convention.
  *
- * `listBranches` and `deleteBranch` have already been ported to `git-ts`
- * (Spec #49); `hasOriginRemote`, `checkout`, and `pull` remain here until
- * their own child tickets port them too.
+ * `listBranches`, `deleteBranch`, `checkout`, and `pull` have already been
+ * ported to `git-ts` (Spec #49); `hasOriginRemote` remains here until its
+ * own child ticket ports it too.
  */
 
 function runGit(cwd: string, args: string[]): string {
@@ -42,22 +42,4 @@ function tryRunGit(cwd: string, args: string[]): string | null {
  */
 export function hasOriginRemote(repoDir: string): boolean {
   return tryRunGit(repoDir, ["remote", "get-url", "origin"]) !== null;
-}
-
-/** Checks out `branch` in `repoDir` via `git checkout <branch>`. */
-export function checkout(repoDir: string, branch: string): void {
-  runGit(repoDir, ["checkout", branch]);
-}
-
-/**
- * Pulls the current branch in `repoDir` from its configured upstream via a
- * plain merge `git pull` (no `--ff-only`), so a genuinely diverged
- * local/remote history is merged rather than rejected. `--no-rebase` pins
- * the merge strategy explicitly rather than falling through to whatever
- * `pull.rebase`/`pull.ff` the ambient git config (or its absence) would
- * otherwise pick -- git itself refuses to guess and errors out on a
- * diverged history unless a strategy is specified one way or another.
- */
-export function pull(repoDir: string): void {
-  runGit(repoDir, ["pull", "--no-rebase"]);
 }
