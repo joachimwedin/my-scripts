@@ -3,12 +3,16 @@ import * as path from "node:path";
 
 import type { BranchFacts } from "../cleanBranches/classify.js";
 import type { WorktreeFacts } from "../cleanWorktree/classify.js";
+import type { PristineFacts } from "../ensurePristine/classify.js";
 import type { SyncFacts } from "../syncRepos/classify.js";
 import {
   aheadCount,
+  DETACHED_HEAD,
   getOriginRemoteUrl,
   getUpstream,
   isWorkingTreeDirty,
+  listBranches,
+  listWorktrees,
   mergeBase,
   showRef,
   symbolicRef,
@@ -187,6 +191,71 @@ export function compareToRemote(
     return "ahead";
   }
   return "diverged";
+}
+
+/**
+ * Composes every fact above into the single combined picture
+ * `classifyPristine` needs for a real repo: whether the default branch
+ * resolved and is clean, whether an `origin` remote exists and how the
+ * default branch compares to it (only when both are true), and every extra
+ * local branch/worktree beyond the default branch/main worktree, each with
+ * its own already-gathered `BranchFacts`/`WorktreeFacts` (reusing
+ * `gatherBranchFacts`/`gatherWorktreeFacts` exactly as `clean-branches`/
+ * `clean-worktree` do). Unresolved default branch short-circuits everything
+ * else, mirroring `gatherSyncFacts`'s existing precedent -- no branches,
+ * worktrees, or origin comparison are gathered in that case either.
+ */
+export function gatherPristineFacts(repoDir: string): PristineFacts {
+  const resolved = resolveDefaultBranch(repoDir);
+  if (resolved === null) {
+    return {
+      defaultBranch: null,
+      dirty: false,
+      hasOriginRemote: false,
+      originComparison: null,
+      extraBranches: [],
+      extraWorktrees: [],
+    };
+  }
+
+  const dirty = isWorkingTreeDirty(repoDir);
+  const hasOriginRemote = getOriginRemoteUrl(repoDir) !== null;
+  const originComparison = hasOriginRemote
+    ? compareToRemote(repoDir, resolved.localName, resolved.mergeTarget)
+    : null;
+
+  const worktrees = listWorktrees(repoDir);
+  // Index 0 is always the repo's main worktree, matching clean-worktree's own convention.
+  const extraWorktreeEntries = worktrees.slice(1);
+
+  // Built once per repo, not recomputed per branch -- mirrors gatherBranchFacts's own convention.
+  const checkedOutBranches = new Map<string, string>();
+  for (const worktree of worktrees) {
+    if (worktree.branch !== DETACHED_HEAD) {
+      checkedOutBranches.set(worktree.branch, worktree.path);
+    }
+  }
+
+  const extraBranches = listBranches(repoDir)
+    .filter((branch) => branch !== resolved.localName)
+    .map((name) => ({
+      name,
+      facts: gatherBranchFacts(repoDir, name, resolved.mergeTarget, checkedOutBranches),
+    }));
+
+  const extraWorktrees = extraWorktreeEntries.map((worktree) => ({
+    path: worktree.path,
+    facts: gatherWorktreeFacts(worktree, resolved.mergeTarget),
+  }));
+
+  return {
+    defaultBranch: resolved.localName,
+    dirty,
+    hasOriginRemote,
+    originComparison,
+    extraBranches,
+    extraWorktrees,
+  };
 }
 
 /** Directory names directly under `reposDir` that are themselves git repos (have a `.git` directory). */

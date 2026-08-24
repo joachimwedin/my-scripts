@@ -3,7 +3,15 @@ import * as path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { listWorktrees } from "git-ts/src/gitClient.js";
-import { compareToRemote, gatherBranchFacts, gatherSyncFacts, gatherWorktreeFacts, listRepoNames, resolveDefaultBranch } from "../../src/git/gitOperations.js";
+import {
+  compareToRemote,
+  gatherBranchFacts,
+  gatherPristineFacts,
+  gatherSyncFacts,
+  gatherWorktreeFacts,
+  listRepoNames,
+  resolveDefaultBranch,
+} from "../../src/git/gitOperations.js";
 import { addOriginRemote, cloneRepo, addWorktree, createTempDirTracker, git, initBareRemote, initRepo } from "./gitFixtures.js";
 
 /** Builds the `branch name -> worktree path` map `gatherBranchFacts` expects, from a real worktree list. */
@@ -362,6 +370,118 @@ describe("compareToRemote", () => {
     const result = compareToRemote(local, "main", "origin/main");
 
     expect(result).toBe("diverged");
+  });
+});
+
+describe("gatherPristineFacts", () => {
+  it("lists an extra branch and an extra worktree together in the gathered facts", () => {
+    const reposDir = makeTempDir("repos-");
+    const repo = initRepo(reposDir, "repo1");
+    git(repo, ["branch", "stray-branch"]);
+    const worktreePath = path.join(reposDir, "repo1-wt");
+    addWorktree(repo, "wt-branch", worktreePath);
+
+    const facts = gatherPristineFacts(repo);
+
+    expect(facts.defaultBranch).toBe("main");
+    expect(facts.extraBranches.map((b) => b.name).sort()).toEqual(["stray-branch", "wt-branch"]);
+    expect(facts.extraWorktrees.map((w) => w.path)).toEqual([worktreePath]);
+
+    const strayBranchFacts = facts.extraBranches.find((b) => b.name === "stray-branch")!;
+    expect(strayBranchFacts.facts.checkedOutAt).toBeNull();
+
+    const wtBranchFacts = facts.extraBranches.find((b) => b.name === "wt-branch")!;
+    expect(wtBranchFacts.facts.checkedOutAt).toBe(worktreePath);
+  });
+
+  it("marks the origin comparison not applicable for a repo with no origin remote", () => {
+    const reposDir = makeTempDir("repos-");
+    const repo = initRepo(reposDir, "repo1");
+
+    const facts = gatherPristineFacts(repo);
+
+    expect(facts.hasOriginRemote).toBe(false);
+    expect(facts.originComparison).toBeNull();
+  });
+
+  it("reports up-to-date when the default branch matches origin", () => {
+    const reposDir = makeTempDir("repos-");
+    const remote = initBareRemote(reposDir, "origin.git");
+    const upstream = initRepo(reposDir, "upstream");
+    addOriginRemote(upstream, remote);
+    git(upstream, ["push", "-q", "origin", "main"]);
+    const local = cloneRepo(remote, reposDir, "local");
+    git(local, ["remote", "set-head", "origin", "main"]);
+
+    const facts = gatherPristineFacts(local);
+
+    expect(facts.hasOriginRemote).toBe(true);
+    expect(facts.originComparison).toBe("up-to-date");
+  });
+
+  it("reports fast-forwardable when the default branch is behind origin", () => {
+    const reposDir = makeTempDir("repos-");
+    const remote = initBareRemote(reposDir, "origin.git");
+    const upstream = initRepo(reposDir, "upstream");
+    addOriginRemote(upstream, remote);
+    git(upstream, ["push", "-q", "origin", "main"]);
+    const local = cloneRepo(remote, reposDir, "local");
+    git(local, ["remote", "set-head", "origin", "main"]);
+
+    fs.writeFileSync(path.join(upstream, "f.txt"), "second\n");
+    git(upstream, ["add", "f.txt"]);
+    git(upstream, ["commit", "-q", "-m", "second"]);
+    git(upstream, ["push", "-q", "origin", "main"]);
+    git(local, ["fetch", "-q", "origin"]);
+
+    const facts = gatherPristineFacts(local);
+
+    expect(facts.hasOriginRemote).toBe(true);
+    expect(facts.originComparison).toBe("fast-forwardable");
+  });
+
+  it("reports ahead when the default branch has commits origin lacks", () => {
+    const reposDir = makeTempDir("repos-");
+    const remote = initBareRemote(reposDir, "origin.git");
+    const upstream = initRepo(reposDir, "upstream");
+    addOriginRemote(upstream, remote);
+    git(upstream, ["push", "-q", "origin", "main"]);
+    const local = cloneRepo(remote, reposDir, "local");
+    git(local, ["remote", "set-head", "origin", "main"]);
+
+    fs.writeFileSync(path.join(local, "g.txt"), "local only\n");
+    git(local, ["add", "g.txt"]);
+    git(local, ["commit", "-q", "-m", "ahead"]);
+
+    const facts = gatherPristineFacts(local);
+
+    expect(facts.hasOriginRemote).toBe(true);
+    expect(facts.originComparison).toBe("ahead");
+  });
+
+  it("reports diverged when the default branch and origin each have commits the other lacks", () => {
+    const reposDir = makeTempDir("repos-");
+    const remote = initBareRemote(reposDir, "origin.git");
+    const upstream = initRepo(reposDir, "upstream");
+    addOriginRemote(upstream, remote);
+    git(upstream, ["push", "-q", "origin", "main"]);
+    const local = cloneRepo(remote, reposDir, "local");
+    git(local, ["remote", "set-head", "origin", "main"]);
+
+    fs.writeFileSync(path.join(upstream, "remote-file.txt"), "remote change\n");
+    git(upstream, ["add", "remote-file.txt"]);
+    git(upstream, ["commit", "-q", "-m", "remote change"]);
+    git(upstream, ["push", "-q", "origin", "main"]);
+
+    fs.writeFileSync(path.join(local, "local-file.txt"), "local change\n");
+    git(local, ["add", "local-file.txt"]);
+    git(local, ["commit", "-q", "-m", "local change"]);
+    git(local, ["fetch", "-q", "origin"]);
+
+    const facts = gatherPristineFacts(local);
+
+    expect(facts.hasOriginRemote).toBe(true);
+    expect(facts.originComparison).toBe("diverged");
   });
 });
 
