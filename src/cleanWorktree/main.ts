@@ -81,7 +81,7 @@ async function processRepo(repoDir: string, repoName: string, force: boolean, to
     showHeader();
     console.log(`  [confirm] ${wt.path} (${wt.branch}) -- ${result.reasons.join("; ")}`);
     if (force) {
-      const accepted = await confirm("  Remove anyway? [y/N] ");
+      const accepted = await confirm("Remove anyway?", wt.path);
       if (accepted) {
         gitClient.removeWorktree(repoDir, wt.path, { force: true });
         console.log("  -> removed");

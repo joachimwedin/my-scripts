@@ -258,7 +258,7 @@ describe("run clean-worktrees", () => {
     const { stdout, exitCode } = await runCliWithTtyAnswer(["--force"], reposDir, "y");
 
     expect(exitCode).toBe(0);
-    expect(stdout).toContain("Remove anyway?");
+    expect(stdout).toContain(`Remove anyway? ${dirtyPath} [y/N]`);
     expect(stdout).toContain("-> removed");
     expect(currentWorktreePaths(repo)).not.toContain(dirtyPath);
     expect(localBranches(repo)).toContain("dirty-branch");
@@ -274,7 +274,7 @@ describe("run clean-worktrees", () => {
     const { stdout, exitCode } = await runCliWithTtyAnswer(["--force"], reposDir, "n");
 
     expect(exitCode).toBe(0);
-    expect(stdout).toContain("Remove anyway?");
+    expect(stdout).toContain(`Remove anyway? ${dirtyPath} [y/N]`);
     expect(stdout).toContain("-> skipped");
     expect(currentWorktreePaths(repo)).toContain(dirtyPath);
   }, 10000);
