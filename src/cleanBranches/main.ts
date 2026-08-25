@@ -86,7 +86,7 @@ async function processRepo(repoDir: string, repoName: string, force: boolean, to
     showHeader();
     console.log(`  [confirm] ${branch} -- ${result.reasons.join("; ")}`);
     if (force) {
-      const accepted = await confirm("  Delete anyway? [y/N] ");
+      const accepted = await confirm("Delete anyway?", branch);
       if (accepted) {
         deleteAndReport(branch, { force: true });
       } else {

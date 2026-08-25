@@ -183,7 +183,8 @@ async function applyFixes(repoDir: string, facts: PristineFacts, result: Classif
     }
 
     // bucket === "confirm"
-    const accepted = await confirm("  Remove anyway? [y/N] ");
+    printWorktreeBucket(wt);
+    const accepted = await confirm("Remove anyway?", wt.path);
     if (accepted) {
       try {
         removeWorktree(repoDir, wt.path, { force: true });
@@ -225,7 +226,8 @@ async function applyFixes(repoDir: string, facts: PristineFacts, result: Classif
     }
 
     // bucket === "confirm"
-    const accepted = await confirm("  Delete anyway? [y/N] ");
+    printBranchBucket({ name: branch, bucket: classified.bucket, reasons: classified.reasons });
+    const accepted = await confirm("Delete anyway?", branch);
     if (accepted) {
       try {
         deleteBranch(repoDir, branch, { force: true });

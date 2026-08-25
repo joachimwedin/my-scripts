@@ -108,6 +108,59 @@ function runCliWithTtyAnswer(args: string[], reposDir: string, promptText: strin
   });
 }
 
+/**
+ * Like `runCliWithTtyAnswer`, but answers an ordered sequence of distinct
+ * prompts, one `{ promptText, answer }` pair per prompt in the order they're
+ * expected to appear. Each pair only searches stdout arriving after the
+ * previous pair's match, so two prompts that share a text prefix (e.g. both
+ * start with "Delete anyway?") are still matched and answered in the actual
+ * order they occur, never the same occurrence twice.
+ */
+function runCliWithTtyAnswers(
+  args: string[],
+  reposDir: string,
+  answers: { promptText: string; answer: string }[],
+): Promise<RunResult> {
+  const cwd = makeTempDir("cwd-");
+  const quotedArgs = ["ensure-pristine", ...args].map((a) => `'${a}'`).join(" ");
+  const command = `REPOS_DIR='${reposDir}' '${CLI_PATH}' ${quotedArgs}`;
+
+  return new Promise((resolve, reject) => {
+    const child = spawn("script", ["-qc", command, "/dev/null"], {
+      cwd,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let consumed = 0;
+    let next = 0;
+    child.stdout.on("data", (d) => {
+      stdout += d.toString();
+      while (next < answers.length) {
+        const { promptText, answer } = answers[next];
+        const idx = stdout.indexOf(promptText, consumed);
+        if (idx === -1) {
+          break;
+        }
+        consumed = idx + promptText.length;
+        child.stdin.write(`${answer}\n`);
+        next += 1;
+      }
+    });
+    child.stderr.on("data", (d) => (stdout += d.toString()));
+    child.on("error", reject);
+    child.on("close", (exitCode) => resolve({ stdout, exitCode: exitCode ?? -1 }));
+  });
+}
+
+/** Creates a local branch off `repoDir`'s current HEAD with a commit not reachable from `main` -- unmerged. */
+function addUnmergedBranch(repoDir: string, branch: string): void {
+  git(repoDir, ["checkout", "-q", "-b", branch]);
+  fs.writeFileSync(path.join(repoDir, `${branch}.txt`), "new\n");
+  git(repoDir, ["add", `${branch}.txt`]);
+  git(repoDir, ["commit", "-q", "-m", branch]);
+  git(repoDir, ["checkout", "-q", "main"]);
+}
+
 describe("run ensure-pristine", () => {
   it("dry run processes every repo under $REPOS_DIR sequentially and changes nothing", async () => {
     const reposDir = makeTempDir("repos-");
@@ -391,6 +444,37 @@ describe("run ensure-pristine", () => {
     expect(accepted.stdout).toContain("-> removed");
     expect(currentWorktreePaths(repo)).not.toContain(dirtyPath);
   }, 10000);
+
+  it("two confirm-bucket branches in the same repo each get their own named prompt, with the item's own [confirm] line reprinted immediately before it", async () => {
+    const reposDir = makeTempDir("repos-");
+    const repo = initRepo(reposDir, "repo1");
+    addUnmergedBranch(repo, "unmerged-branch-a");
+    addUnmergedBranch(repo, "unmerged-branch-b");
+
+    const { stdout, exitCode } = await runCliWithTtyAnswers(["--force"], reposDir, [
+      { promptText: "Delete anyway? unmerged-branch-a", answer: "y" },
+      { promptText: "Delete anyway? unmerged-branch-b", answer: "n" },
+    ]);
+
+    expect(exitCode).toBe(0);
+    // Each prompt names only its own item, never the other's.
+    expect(stdout).toMatch(/Delete anyway\? unmerged-branch-a \[y\/N\]/);
+    expect(stdout).toMatch(/Delete anyway\? unmerged-branch-b \[y\/N\]/);
+    // The item's own [confirm] line is reprinted immediately before its own
+    // prompt -- the pty inserts cursor-control escape sequences between the
+    // `console.log` line and `readline`'s own prompt write, so those are
+    // stripped before asserting adjacency.
+    const plain = stdout.replace(/\x1b\[[0-9;]*[A-Za-z]/g, "");
+    expect(plain).toMatch(
+      /\[confirm\] unmerged-branch-a -- not merged into main\r?\n\s*Delete anyway\? unmerged-branch-a \[y\/N\]/,
+    );
+    expect(plain).toMatch(
+      /\[confirm\] unmerged-branch-b -- not merged into main\r?\n\s*Delete anyway\? unmerged-branch-b \[y\/N\]/,
+    );
+    // Answering independently only deletes the one accepted.
+    expect(localBranches(repo)).not.toContain("unmerged-branch-a");
+    expect(localBranches(repo)).toContain("unmerged-branch-b");
+  }, 15000);
 
   it("the verdict printed after --force reflects the post-fix state, not the pre-fix snapshot", async () => {
     const reposDir = makeTempDir("repos-");

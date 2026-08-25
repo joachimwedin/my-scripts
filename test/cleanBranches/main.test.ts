@@ -186,7 +186,7 @@ describe("run clean-branches", () => {
     const { stdout, exitCode } = await runCliWithTtyAnswer(["--force"], reposDir, "y");
 
     expect(exitCode).toBe(0);
-    expect(stdout).toContain("Delete anyway?");
+    expect(stdout).toMatch(/Delete anyway\? unmerged-branch \[y\/N\]/);
     expect(stdout).toContain("-> deleted");
     expect(localBranches(repo)).not.toContain("unmerged-branch");
   }, 10000);
@@ -199,7 +199,7 @@ describe("run clean-branches", () => {
     const { stdout, exitCode } = await runCliWithTtyAnswer(["--force"], reposDir, "n");
 
     expect(exitCode).toBe(0);
-    expect(stdout).toContain("Delete anyway?");
+    expect(stdout).toMatch(/Delete anyway\? unmerged-branch \[y\/N\]/);
     expect(stdout).toContain("-> skipped");
     expect(localBranches(repo)).toContain("unmerged-branch");
   }, 10000);
