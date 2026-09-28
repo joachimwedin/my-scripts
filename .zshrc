@@ -33,6 +33,61 @@ lsc() {
     fi
 }
 
+alias cdx='cd ~/sandbox-files'
+
+cbox() {
+  local workdir
+  workdir=$(git rev-parse --show-toplevel 2>/dev/null) || workdir=$PWD
+  local name="cbox-$(basename "$workdir")"
+  local config="$HOME/.config/sandbox-setup/sandboxes.json"
+
+  mkdir -p "$HOME/sandbox-files"
+  local paths=("$workdir" "$HOME/sandbox-files")
+  local repo
+  while IFS= read -r repo; do
+    paths+=("$HOME/repos/$repo")
+  done < <(jq -r '.[]' "$config")
+
+  local superset_env=()
+  local k v
+  while IFS='=' read -r k v; do
+    [ -z "$k" ] && continue
+    case "$k" in
+      SUPERSET_HOST_AGENT_HOOK_URL)
+        v=$(printf '%s' "$v" | sed -E 's#://(127\.0\.0\.1|localhost)#://host.docker.internal#')
+        ;;
+    esac
+    superset_env+=(-e "$k=$v")
+  done < <(env | grep '^SUPERSET_')
+
+  if ! sbx ls -q | grep -qx "$name"; then
+    mkdir -p "$HOME/.claude/projects"
+    sbx create --name "$name" claude \
+      -e "HOST_HOME=$HOME" \
+      "${superset_env[@]}" \
+      "${paths[@]}" "$SUPERSET_HOME_DIR/hooks" "$HOME/.claude/projects"
+
+    local sandbox_settings sync_cmd
+    sync_cmd='rsync -a --update /home/agent/.claude/projects/ "$HOST_HOME/.claude/projects/" 2>/dev/null || true'
+    sandbox_settings=$(mktemp)
+    jq --arg cmd "$sync_cmd" \
+      '.hooks.Stop += [{"hooks":[{"type":"command","command":$cmd}]}]' \
+      ~/.claude/settings.json > "$sandbox_settings"
+    chmod 644 "$sandbox_settings"
+    sbx cp "$sandbox_settings" "$name":/home/agent/.claude/settings.json
+    rm -f "$sandbox_settings"
+
+    sbx cp ~/.claude/statusline-command.sh "$name":/home/agent/.claude/statusline-command.sh
+  fi
+
+  local skill
+  for skill in "$HOME/.claude/skills"/*; do
+    sbx cp -L "$skill" "$name":/home/agent/.claude/skills/ || return 1
+  done
+
+  sbx run --name "$name" -- --dangerously-skip-permissions "$@"
+}
+
 # CURRENT BRANCH / PATH
 COLOR_DEF='%F{normal}'
 COLOR_USR='%F{243}'
